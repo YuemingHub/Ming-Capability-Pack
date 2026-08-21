@@ -44,9 +44,9 @@ export async function execute(
 
   return {
     mode: 'planned',
-    success: true,
+    success: false,
     summary:
-      '已接收任务。当前环境未启用子代理执行引擎，请直接完成该目标并产出真实文件。',
+      '当前环境未启用子代理执行引擎，无法委托执行。请直接用你自己的工具完成该目标并产出真实文件。',
     artifacts: [],
   }
 }
@@ -155,7 +155,7 @@ function pickProvider(subagents?: SubagentRuntime): string | undefined {
   return available[0]
 }
 
-function resolveWorkdir(exec: any): string {
+export function resolveWorkdir(exec: any): string {
   return exec.agent?.session?.header?.cwd ?? process.cwd()
 }
 

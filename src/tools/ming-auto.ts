@@ -7,7 +7,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import { execute } from '../services/executor.js'
+import { execute, resolveWorkdir } from '../services/executor.js'
 import { writeEvidence } from '../services/evidence-collector.js'
 import type { MingResult } from '../types.js'
 
@@ -79,7 +79,7 @@ export function registerMingAutoTool(ctx: Context): void {
       // 收集证据（尽力而为，不阻断主流程）
       let evidencePath = ''
       try {
-        const evidence = await writeEvidence({ goal, resources, outcome })
+        const evidence = await writeEvidence({ goal, resources, outcome, workdir: resolveWorkdir(exec) })
         evidencePath = evidence.path
       } catch {
         /* 证据是尽力而为 */

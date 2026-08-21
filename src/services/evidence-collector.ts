@@ -12,6 +12,8 @@ export interface EvidencePayload {
   goal: string
   resources: string[]
   outcome: ExecutionOutcome
+  /** 证据卡落盘目录（会话工作区，而非进程 cwd） */
+  workdir: string
 }
 
 export interface EvidenceFile {
@@ -20,7 +22,7 @@ export interface EvidenceFile {
 }
 
 export async function writeEvidence(payload: EvidencePayload): Promise<EvidenceFile> {
-  const dir = join(process.cwd(), 'ming-evidence')
+  const dir = join(payload.workdir, 'ming-evidence')
   await mkdir(dir, { recursive: true })
 
   const id = `evidence-${Date.now()}`

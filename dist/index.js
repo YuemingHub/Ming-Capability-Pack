@@ -10,8 +10,8 @@ async function execute(ctx, goal, resources, exec) {
   }
   return {
     mode: "planned",
-    success: true,
-    summary: "\u5DF2\u63A5\u6536\u4EFB\u52A1\u3002\u5F53\u524D\u73AF\u5883\u672A\u542F\u7528\u5B50\u4EE3\u7406\u6267\u884C\u5F15\u64CE\uFF0C\u8BF7\u76F4\u63A5\u5B8C\u6210\u8BE5\u76EE\u6807\u5E76\u4EA7\u51FA\u771F\u5B9E\u6587\u4EF6\u3002",
+    success: false,
+    summary: "\u5F53\u524D\u73AF\u5883\u672A\u542F\u7528\u5B50\u4EE3\u7406\u6267\u884C\u5F15\u64CE\uFF0C\u65E0\u6CD5\u59D4\u6258\u6267\u884C\u3002\u8BF7\u76F4\u63A5\u7528\u4F60\u81EA\u5DF1\u7684\u5DE5\u5177\u5B8C\u6210\u8BE5\u76EE\u6807\u5E76\u4EA7\u51FA\u771F\u5B9E\u6587\u4EF6\u3002",
     artifacts: []
   };
 }
@@ -123,7 +123,7 @@ function truncate(text, max) {
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 async function writeEvidence(payload) {
-  const dir = join(process.cwd(), "ming-evidence");
+  const dir = join(payload.workdir, "ming-evidence");
   await mkdir(dir, { recursive: true });
   const id = `evidence-${Date.now()}`;
   const card = {
@@ -192,7 +192,7 @@ function registerMingAutoTool(ctx) {
       const outcome = await execute(ctx, goal, resources, exec);
       let evidencePath = "";
       try {
-        const evidence = await writeEvidence({ goal, resources, outcome });
+        const evidence = await writeEvidence({ goal, resources, outcome, workdir: resolveWorkdir(exec) });
         evidencePath = evidence.path;
       } catch {
       }
@@ -211,12 +211,22 @@ function registerMingAutoTool(ctx) {
 
 // src/index.ts
 var name = "@mingworkbench/capability-pack";
-var version = "0.3.0";
-var inject = ["tools"];
+var version = "0.4.0";
+var inject = ["tools", "systemPrompt"];
 async function apply(ctx) {
   ctx.logger.info("\u{1F680} Ming Capability Pack \u6B63\u5728\u52A0\u8F7D...");
   try {
     registerMingAutoTool(ctx);
+    ctx.systemPrompt.section({
+      name: "tool:ming_auto",
+      order: 110,
+      text: [
+        "\u5F53\u7528\u6237\u7528\u81EA\u7136\u8BED\u8A00\u63CF\u8FF0\u300C\u60F3\u5B8C\u6210\u7684\u4E8B\u60C5\u300D\u65F6\uFF0C\u8C03\u7528 ming_auto \u5DE5\u5177\u6765\u771F\u6B63\u5B8C\u6210\u5B83\u3002",
+        "\u4F8B\u5982\uFF1A\u505A\u4E00\u4E2A\u7F51\u7AD9\u3001\u5904\u7406\u4E00\u6279\u6570\u636E\u3001\u6574\u7406\u6587\u4EF6\u3001\u5199\u6587\u6863\u3001\u8DD1\u81EA\u52A8\u5316\u6D41\u7A0B\u3001\u751F\u6210\u62A5\u8868\u7B49\u3002",
+        "\u628A\u7528\u6237\u7684\u76EE\u6807\u539F\u6837\u5199\u8FDB goal \u53C2\u6570\uFF08\u4E00\u53E5\u8BDD\u6216\u4E00\u6BB5\u8BDD\uFF09\uFF1B\u5982\u6709\u76F8\u5173\u7684\u6587\u4EF6\u8DEF\u5F84\u6216 URL\uFF0C\u586B\u8FDB resources\u3002",
+        "ming_auto \u4F1A\u628A\u76EE\u6807\u8F6C\u4EA4\u7ED9\u4E00\u4E2A\u5168\u65B0\u7684\u6267\u884C\u5B50\u4EE3\u7406\uFF0C\u7531\u5B83\u771F\u6B63\u6267\u884C\u5E76\u4EA7\u51FA\u771F\u5B9E\u6587\u4EF6\uFF1B\u5B8C\u6210\u540E\u6309\u5DE5\u5177\u8FD4\u56DE\u7684\u4EA7\u51FA\u6587\u4EF6\u8DEF\u5F84\u5411\u7528\u6237\u6C47\u62A5\u3002"
+      ].join("\n")
+    });
     ctx.logger.info("\u2705 ming_auto \u5DE5\u5177\u5DF2\u6CE8\u518C");
     ctx.logger.info("\u{1F4A1} \u76F4\u63A5\u63CF\u8FF0\u4F60\u60F3\u505A\u7684\u4E8B\uFF0CMing \u4F1A\u5E2E\u4F60\u771F\u6B63\u5B8C\u6210");
   } catch (error) {
