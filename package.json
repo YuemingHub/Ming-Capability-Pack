@@ -1,0 +1,48 @@
+{
+  "name": "@mingworkbench/capability-pack",
+  "version": "0.1.0",
+  "description": "智能插件管家 - 让普通人能用 DeepSeek Harness 的 1594+ 插件",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "capabilities",
+    "automation",
+    "ai-assistant"
+  ],
+  "author": "Ming Workbench",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YuemingHub/Ming-Capability-Pack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YuemingHub/Ming-Capability-Pack/issues"
+  },
+  "homepage": "https://github.com/YuemingHub/Ming-Capability-Pack#readme",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^0.10.0",
+    "@deepseek-ai/dsh": "^0.1.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "typescript": "^6.0.0",
+    "tsup": "^8.0.0"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "typecheck": "tsc --noEmit"
+  }
+}
