@@ -79,9 +79,9 @@ ${workdir}`);
 function extractArtifacts(text) {
   const found = /* @__PURE__ */ new Set();
   const patterns = [
-    /[A-Za-z]:\\[^\s，。；、]+/g,
-    /(?:\/|\.\/)[^\s，。；、]+\.[A-Za-z0-9]{1,5}/g,
-    /https?:\/\/[^\s，。；、]+/gi
+    /[A-Za-z]:\\[^\s，。；、`"']+/g,
+    /(?:\/|\.\/)[^\s，。；、`"']+\.[A-Za-z0-9]{1,5}/g,
+    /https?:\/\/[^\s，。；、`"']+/gi
   ];
   for (const re of patterns) {
     for (const m of text.match(re) ?? []) {
