@@ -1,0 +1,11 @@
+# Ming Capability Pack bundle patch: inserts the `ming_auto` tool plugin row
+# into the profile roster. Applied as a profile bundle layer (the
+# `dsh.bundle.patch` manifest field) over dsh-base; activate with
+# `dsh plugin --profile <name> add @mingworkbench/capability-pack`.
+#
+# The row is a bare host-only plugin by package name: its `exports "."` runs
+# in the host process and registers the `ming_auto` tool (a thin forwarder to
+# the native subagent seam).
+- insert:
+    - id: ming
+      name: '@mingworkbench/capability-pack'
