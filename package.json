@@ -1,10 +1,16 @@
 {
   "name": "@mingworkbench/capability-pack",
-  "version": "0.1.0",
-  "description": "智能插件管家 - 让普通人能用 DeepSeek Harness 的 1594+ 插件",
+  "version": "0.3.0",
+  "description": "Ming 智能助手 - 用自然语言一键调用 Harness 原生能力，真正完成任务并产出文件",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist",
     "README.md",
@@ -30,8 +36,13 @@
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
   },
-  "dependencies": {},
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.8"
+  },
   "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.8",
     "@types/node": "^22.20.0",
     "typescript": "^6.0.0",
     "tsup": "^8.0.0"

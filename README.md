@@ -1,15 +1,15 @@
 # Ming Capability Pack
 
-**智能插件管家** - 让普通人能用 DeepSeek Harness 的 1594+ 插件
+**用自然语言，一键调用 Harness 原生能力，真正把事做完。**
 
 ## 🎯 这是什么
 
-Ming Capability Pack 是 DeepSeek Harness 的智能插件，帮助用户：
-- 🤖 **用自然语言说出需求**，不需要懂技术术语
-- 🔍 **自动从 1594+ 插件中选择最佳组合**，不需要自己研究
-- 📦 **自动安装和配置**，不需要手动操作
-- ⚙️ **智能编排执行**，不需要懂插件怎么组合
-- ✅ **提供证据验证**，确保任务真的完成了
+Ming 是 DeepSeek Harness 的一个薄插件。任何人只要用自然语言描述「想做什么」，
+Ming 就把这件事一键转交给 Harness 原生的 Agent（自带 LLM 与工具），
+让它真正去执行——写文件、跑命令、生成网页、处理数据……而不是只给建议。
+
+核心思路：**不重复造轮子**。意图理解、步骤规划、任务执行，全部复用 Harness 已经具备的能力；
+Ming 只负责「接收自然语言 → 转交原生 Agent → 收集结果与证据」。
 
 ## 🚀 快速开始
 
@@ -21,113 +21,60 @@ Ming Capability Pack 是 DeepSeek Harness 的智能插件，帮助用户：
 ### 安装
 
 ```bash
-# 在 Harness 项目中安装
 dsh plugin --profile web add @mingworkbench/capability-pack
 ```
 
 ### 使用
 
-1. 启动 DeepSeek Harness:
-```bash
-dsh web
-```
+启动 Harness 后，直接在对话里描述你想做的事：
 
-2. 在对话中使用自然语言描述需求，Ming 会自动识别并帮你完成：
 ```
 用户：我想做一个摄影作品集网站
 
 Ming：
-🔍 分析意图...
-✓ 理解：静态网站生成 + 图片展示
-
-🔎 搜索最佳插件组合...
-✓ 找到 3 个插件：
-  - dsh-static-site-generator (⭐5368)
-  - dsh-image-optimizer (⭐1200)
-  - dsh-browser-preview (内置)
-
-📦 自动安装...
-✓ 插件已就绪
-
-⚙️ 开始执行...
-✓ HTML 生成完成
-✓ 图片优化完成
-✓ 预览准备就绪
-
 ✅ 完成！
-📄 网站: D:/output/index.html
-🖼️ 截图: D:/output/screenshot.png
-📋 证据卡: evidence-2026xxxx.json
+📄 网站: D:/.../portfolio/index.html
+📋 证据卡: ming-evidence/evidence-1710000000000.json
 ```
 
-## 💡 支持的场景
+支持任何可描述的任务：生成网站、处理图片/数据、整理文件、写文档、自动化工作流……
 
-目前支持的场景：
-- ✅ 静态网站生成
-- 🚧 数据可视化（开发中）
-- 🚧 图片批处理（开发中）
-- 🚧 文件自动化（开发中）
-
-更多场景持续添加中...
-
-## 🔧 工作原理
+## 🧭 工作原理
 
 ```
-用户需求（自然语言）
-    ↓
-意图分析（理解要做什么）
-    ↓
-插件选择（从 1594+ 中筛选最佳）
-    ↓
-自动安装（确保插件可用）
-    ↓
-智能编排（按正确顺序执行）
-    ↓
-证据验证（确保结果正确）
-    ↓
-输出结果
+自然语言目标
+      ↓
+ming_auto 工具（一键转交）
+      ↓
+Harness 原生子代理（理解 + 规划 + 执行）
+      ↓
+真实产物（文件 / 网页 / 脚本）
+      ↓
+证据卡（ming-evidence/*.json）
 ```
 
-## 🏗️ 核心能力
+## 🏗️ 代码结构
 
-### 1. 意图分析引擎
-理解用户的自然语言需求，转换为结构化的能力需求。
-
-### 2. 智能插件选择器 ⭐
-从 1594+ 插件中自动选择最佳组合，综合考虑：
-- 受欢迎程度（stars + 安装次数）
-- 活跃度（最近更新时间）
-- 相关性（描述匹配度）
-- 兼容性（插件间是否冲突）
-
-### 3. 自动安装器
-检查本地是否已安装，自动下载和配置缺失的插件。
-
-### 4. 智能编排器
-分析插件依赖关系，按正确顺序执行，处理数据传递。
-
-### 5. 证据收集器
-记录完整执行过程，验证结果正确性，生成可追溯的证据链。
+| 文件 | 职责 |
+| --- | --- |
+| `src/index.ts` | 插件入口，注册 `ming_auto` 工具 |
+| `src/tools/ming-auto.ts` | 工具定义（goal + resources → 结构化结果） |
+| `src/services/executor.ts` | 薄转发器：调用原生子代理执行 |
+| `src/services/evidence-collector.ts` | 写证据卡 |
+| `src/types.ts` | 类型定义 |
 
 ## 📖 开发
 
 ```bash
-# 克隆仓库
 git clone https://github.com/YuemingHub/Ming-Capability-Pack.git
 cd Ming-Capability-Pack
 
-# 安装依赖
-pnpm install
-
-# 开发模式
-pnpm dev
-
-# 构建
-pnpm build
-
-# 类型检查
-pnpm typecheck
+npm install     # 安装依赖
+npm run build   # 构建
+npm run typecheck  # 类型检查
 ```
+
+详见 [DEVELOPMENT.md](DEVELOPMENT.md) 与 [DESIGN.md](DESIGN.md)。
 
 ## 🤝 贡献
 
@@ -135,18 +82,12 @@ pnpm typecheck
 
 ## 📄 许可证
 
-MIT License - 详见 [LICENSE](LICENSE)
+MIT License - 详见 [LICENSE](LICENSE)。
 
 ## 🔗 相关链接
 
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-- [插件市场](https://api.deepseek1024.com)
 - [问题反馈](https://github.com/YuemingHub/Ming-Capability-Pack/issues)
-
-## 💬 联系我们
-
-- GitHub Issues: [提问题](https://github.com/YuemingHub/Ming-Capability-Pack/issues)
-- Discussions: [讨论区](https://github.com/YuemingHub/Ming-Capability-Pack/discussions)
 
 ---
 
