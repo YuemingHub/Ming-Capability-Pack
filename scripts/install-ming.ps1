@@ -1,14 +1,14 @@
-﻿<#
+<#
   install-ming.ps1 — 一键安装 Ming（DeepSeek Harness 自然语言能力中间件）
 
   给完全不懂技术的新人：复制一条命令，自动完成安装。
+  主命令（npm 官方源，Windows PowerShell 5.1 兼容，无需访问 GitHub）：
+    powershell -NoProfile -ExecutionPolicy Bypass -c "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.1.tgz' -OutFile $t;$s=(& tar -xzOf $t 'package/scripts/install-ming.ps1')|Out-String -Width 1000;iex $s"
 
-  方式 A（npm 源，国内可达，推荐）：脚本已打包在 npm 里，经国内 npmmirror 镜像拉取：
-    powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://registry.npmmirror.com/@mingworkbench/capability-pack/-/capability-pack-0.6.0.tgz | tar -xzO package/scripts/install-ming.ps1 | iex"
+  国内镜像 npmmirror 同步后，把上面 URL 的 registry.npmjs.org 换成 registry.npmmirror.com 即可。
 
-  方式 B（GitHub 源，需能访问 GitHub）：
-    powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1 | iex"
-    （GitHub 慢可换：irm https://cdn.jsdelivr.net/gh/YuemingHub/Ming-Capability-Pack@main/scripts/install-ming.ps1 | iex）
+  GitHub 备选（需能访问 GitHub，脚本无 BOM 可直接 iex）：
+    powershell -NoProfile -ExecutionPolicy Bypass -c "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$s=(irm 'https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1')|Out-String -Width 1000;iex $s"
 
   脚本自动完成：
     1. 定位 DSH Desktop（注册表 / 常见安装目录 / 正在运行的进程）
@@ -20,13 +20,13 @@
   可选参数：
     -Profile <name>   指定 profile（默认自动探测）
     -Source  <spec>   插件源（默认 @mingworkbench/capability-pack，npm 包名；也支持 github:YuemingHub/Ming-Capability-Pack）
-    -Registry <url>   pnpm registry（默认 https://registry.npmmirror.com，国内镜像）
+    -Registry <url>   pnpm registry；留空自动选择：npmmirror（国内镜像，最快）可用则用它，否则回退 npmjs 官方源
     -DryRun           只探测，不真正安装
 #>
 param(
   [string]$Profile = '',
   [string]$Source = '@mingworkbench/capability-pack',
-  [string]$Registry = 'https://registry.npmmirror.com',
+  [string]$Registry = '',
   [switch]$DryRun
 )
 $ErrorActionPreference = 'Stop'
@@ -109,7 +109,22 @@ if (Test-Path $desktopBin) { $env:Path = $desktopBin + ';' + $env:Path }
 $env:DSH_HOME = $dshHome
 $env:DSH_BIN = $bin
 
-# ---------- 5. 安装 ----------
+# ---------- 5. 自动选择 registry（npmmirror 国内镜像可用则优先，否则回退 npmjs）----------
+if (-not $Registry) {
+  Write-Step '选择下载源 ...'
+  $Registry = 'https://registry.npmjs.org'
+  try {
+    $probe = Invoke-RestMethod -Uri "https://registry.npmmirror.com/$Source" -Headers @{ 'User-Agent' = 'ming' } -TimeoutSec 10 -ErrorAction Stop
+    if ($probe.'dist-tags'.latest) {
+      $Registry = 'https://registry.npmmirror.com'
+      Write-Ok "已用国内镜像（npmmirror），最快"
+    }
+  } catch {
+    Write-Ok "国内镜像暂未同步，用官方源（npmjs）"
+  }
+}
+
+# ---------- 6. 安装 ----------
 Write-Step "安装插件：$Source（profile: $Profile，registry: $Registry）"
 if ($DryRun) {
   Write-Ok "（DryRun）将执行: node `"$bin`" plugin --profile $Profile add $Source --registry=`"$Registry`""
@@ -121,7 +136,7 @@ if ($LASTEXITCODE -ne 0) {
   Write-Err "安装失败（退出码 $LASTEXITCODE）。请检查网络后重试；仍失败请把上面的完整输出发给维护者。"
 }
 
-# ---------- 6. 引导 ----------
+# ---------- 7. 引导 ----------
 Write-Host ''
 Write-Host '============================================================' -ForegroundColor Green
 Write-Host '  Ming 已安装完成！' -ForegroundColor Green

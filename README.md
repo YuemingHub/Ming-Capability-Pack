@@ -23,19 +23,19 @@ Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真�
 2. **复制下面这一条命令**，粘贴到 PowerShell（开始菜单搜索 PowerShell 打开）并回车：
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://registry.npmmirror.com/@mingworkbench/capability-pack/-/capability-pack-0.6.0.tgz | tar -xzO package/scripts/install-ming.ps1 | iex"
+   powershell -NoProfile -ExecutionPolicy Bypass -c "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.1.tgz' -OutFile $t;$s=(& tar -xzOf $t 'package/scripts/install-ming.ps1')|Out-String -Width 1000;iex $s"
    ```
 
-   > 如果镜像还没同步，用官方源这条（内容完全一样）：
+   > 国内镜像同步后，用下面这条更快（内容完全一样）：
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.0.tgz | tar -xzO package/scripts/install-ming.ps1 | iex"
+   powershell -NoProfile -ExecutionPolicy Bypass -c "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmmirror.com/@mingworkbench/capability-pack/-/capability-pack-0.6.1.tgz' -OutFile $t;$s=(& tar -xzOf $t 'package/scripts/install-ming.ps1')|Out-String -Width 1000;iex $s"
    ```
 
-   > 能访问 GitHub 的话，也可以用这条：
+   > 能访问 GitHub 的话，也可以用这条（内容完全一样）：
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1 | iex"
+   powershell -NoProfile -ExecutionPolicy Bypass -c "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$s=(irm 'https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1')|Out-String -Width 1000;iex $s"
    ```
 
 3. **完全退出 DSH Desktop，再重新打开**（窗口关闭 + 任务栏右下角图标右键退出）。
