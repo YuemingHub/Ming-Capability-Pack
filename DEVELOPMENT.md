@@ -34,6 +34,12 @@ Ming-Capability-Pack/
 │   │   └── evidence-collector.ts   # 写证据卡
 │   └── tools/
 │       └── ming-auto.ts            # ming_auto 工具定义
+├── bin/
+│   ├── ming.js                     # Node CLI 包装器（跨平台）
+│   ├── ming                        # Unix shell 包装器
+│   └── ming.cmd                    # Windows CMD 包装器
+├── scripts/
+│   └── smoke.js                    # 冒烟验证脚本
 ├── dist/                           # 构建输出
 ├── package.json
 ├── tsconfig.json
@@ -42,22 +48,62 @@ Ming-Capability-Pack/
 └── CONTRIBUTING.md
 ```
 
+## 冒烟验证
+
+```bash
+# 基础冒烟（typecheck + build；跳过真机）
+npm run smoke
+
+# 真机冒烟（需要 Harness 环境）
+DSH_HOME="C:\Users\Administrator\.dsh" DSH_BIN="E:/claw/DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js" npm run smoke
+```
+
+## CLI 直接调用
+
+```bash
+# 把自然语言任务直接交给 Harness 执行
+node bin/ming.js "创建一个 hello.html，内容为 <h1>Hello Ming</h1>"
+
+# Unix shell（Git Bash / WSL / macOS / Linux）
+./bin/ming "创建一个 hello.html，内容为 <h1>Hello Ming</h1>"
+
+# Windows CMD / PowerShell
+bin\ming.cmd "创建一个 hello.html，内容为 <h1>Hello Ming</h1>"
+
+# 指定 profile（默认是 ming）
+DSH_PROFILE=web ./bin/ming "整理当前目录文件"
+```
+
+CLI 等价于：
+
+```bash
+node "$DSH_BIN" --profile <profile名> "请调用 ming_auto 工具：<你的任务描述>"
+```
+
 ## 真机测试
 
-1. 构建：
+### 方式一：CLI 包装器（推荐开发用）
 
 ```bash
-npm run build
+npm run cli -- "创建一个 hello.html，内容为 <h1>Hello Ming</h1>"
 ```
 
-2. 装到 Harness：
+### 方式二：Harness 对话框
+
+1. 构建并安装插件（见 README 「安装」章节）
+2. 启动 Harness：
 
 ```bash
-dsh plugin --profile web add @mingworkbench/capability-pack
+dsh --profile <profile名>
 ```
 
-3. 在 Harness Web UI 里说一句需求，观察三点：
+3. 在对话框输入：
 
+```
+请调用 ming_auto 工具：在当前目录创建 hello.html，内容为 <h1>Hello Ming</h1>
+```
+
+4. 验证三点：
    - 是否调用了 `ming_auto` 工具；
    - 是否派生了子代理真正执行（而非只回文案）；
    - 是否生成了产物文件与 `ming-evidence/*.json` 证据卡。

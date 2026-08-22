@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+# ming — Unix wrapper for Ming Capability Pack
+# 用法：
+#   ./bin/ming <自然语言任务描述>
+#   DSH_PROFILE=web ./bin/ming "帮我整理文件"
+
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+NODE_BIN="${DSH_NODE:-node}"
+DSH_BIN="${DSH_BIN:-${SCRIPT_DIR}/../node_modules/@deepseek-ai/dsh/lib/bin.js}"
+DSH_PROFILE="${DSH_PROFILE:-ming}"
+DSH_HOME="${DSH_HOME:-${HOME:-${USERPROFILE:-}}/.dsh}"
+
+if [ $# -eq 0 ]; then
+  cat <<'EOF'
+[ming] Ming Capability Pack CLI
+
+用法：
+  ./bin/ming <自然语言任务描述>
+  DSH_PROFILE=web ./bin/ming "帮我整理文件"
+
+环境变量：
+  DSH_BIN     dsh bin.js 路径（默认自动查找）
+  DSH_PROFILE 使用的 profile（默认 ming）
+  DSH_HOME    Harness 数据目录（默认 ~/.dsh）
+
+示例：
+  ./bin/ming 创建一个 hello.html，内容为 <h1>Hello Ming</h1>
+  ./bin/ming 把当前目录的 .txt 文件按修改时间排序并输出到 list.txt
+EOF
+  exit 0
+fi
+
+PROMPT="请调用 ming_auto 工具完成下面的任务：$*"
+echo "[ming] profile=${DSH_PROFILE}"
+echo "[ming] prompt=$*"
+
+"${NODE_BIN}" "${SCRIPT_DIR}/ming.js" "${DSH_BIN}" "--profile" "${DSH_PROFILE}" "${PROMPT}"

@@ -1,7 +1,7 @@
 /**
  * 类型定义
  *
- * Ming Capability Pack v0.3：薄适配层。
+ * Ming Capability Pack v0.4：薄适配层。
  * 意图理解、步骤规划、任务执行全部交给 Harness 原生 Agent（子代理 + LLM），
  * Ming 只负责「一键把自然语言转交给原生能力」并收集结果与证据。
  */

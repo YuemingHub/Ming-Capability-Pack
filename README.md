@@ -1,92 +1,179 @@
 # Ming Capability Pack
 
-**用自然语言，一键调用 Harness 原生能力，真正把事做完。**
+**用自然语言，一键调用 DeepSeek Harness 原生能力，真正把事做完。**
 
-> 任何一个人，只要用自然语言描述「想做什么」，剩下的技术部分由 Ming 和 Harness 完成。
+> 任何一个人，只要用自然语言描述「想做什么」，剩下的执行交给 Harness 原生子代理，
+> 产出真实文件 + 证据卡。
 
-## 这是什么
+## 它解决什么问题
 
-Ming 是 DeepSeek Harness 的一个薄插件。它**不重复造轮子**——不自己实现意图理解、
-步骤规划、任务执行，而是把这些全部转交给 Harness 原生 Agent（自带 LLM 与工具），
-让它真正去执行并产出文件。Ming 只做一件事：**把「你的自然语言目标」一键转交给
-原生 Agent，再把结果和证据整理给你**。
+Harness 已经很强（LLM + 工具 + 子代理），但普通用户面对空白对话框，
+往往不知道该怎么把「想做的事」变成「真正被执行」。
 
-- ✅ 真正完成任务：写文件、跑命令、生成网页、处理数据、自动化工作流……
-- ✅ 产出真实文件，而不是只给建议
-- ✅ 每次执行自动留一张证据卡（做了什么、产出了什么）
+Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真正执行**，
+不重复造轮子，不给模糊建议，只交付真实产物。
 
 ## 安装
 
 ### 前置条件
 
-- 已安装 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-- 安装只需要 `dsh` 命令；Node.js 仅在从源码构建时需要
+- 已安装 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（桌面版或 CLI 版）
+- 有 `dsh` 命令，或能找到 `dsh/lib/bin.js` 的绝对路径
+- Node.js >= 22（Harness 自带即可，无需额外安装）
 
-### 方式一：npm（推荐）
-
-```bash
-dsh plugin --profile web add @mingworkbench/capability-pack
-```
-
-### 方式二：从 GitHub 安装
+### 方式一：从 GitHub 安装（推荐）
 
 ```bash
-dsh plugin --profile web add github:YuemingHub/Ming-Capability-Pack
+# 把插件加到指定 profile（web / headless / 自定义名均可）
+dsh plugin --profile <profile名> add github:YuemingHub/Ming-Capability-Pack
 ```
 
-### 方式三：本地源码安装（开发者）
+安装后**重启 Harness** 使 `ming_auto` 工具生效。
+
+### 方式二：本地源码安装（开发者 / 离线环境）
 
 ```bash
 git clone https://github.com/YuemingHub/Ming-Capability-Pack.git
-dsh plugin --profile web add ./Ming-Capability-Pack
+cd Ming-Capability-Pack
+npm install
+npm run build
+
+# 把当前目录作为插件源添加到 profile
+dsh plugin --profile <profile名> add "$(pwd)"
 ```
 
-> `--profile` 可以是任意 profile 名（`web` / `tui` / `headless`），
-> 取决于你想在哪个 Harness 界面里用 Ming。装完重启 Harness 生效。
+### 方式三：DSH_HOME  profile 直装（高级）
 
-### 常见问题：`dsh` 不在 PATH
-
-桌面版 Harness 的 `dsh` 没有注册成全局命令。用 `node` 直接运行它，并设置
-`DSH_HOME` 指向你的 Harness 数据目录（包含 `profiles/` 的那个目录）即可：
+在 Harness 数据目录下手动建立 profile 骨架（适合 CI / 自定义部署）：
 
 ```bash
-# 1. 找到 dsh CLI —— 在 Harness 安装目录的 node_modules 里，例如：
-#    <Harness 安装目录>/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js
+# 1. 创建 profile 目录
+mkdir -p "$DSH_HOME/profiles/ming"
 
-# 2. 设置 DSH_HOME
-export DSH_HOME="<你的 Harness 数据目录>"        # macOS / Linux
-# Windows PowerShell:
-# $env:DSH_HOME = "<你的 Harness 数据目录>"
+# 2. 写入 profile package.json（声明 bundles 加载顺序）
+cat > "$DSH_HOME/profiles/ming/package.json" <<'EOF'
+{
+  "name": "profile-ming",
+  "dsh": {
+    "bundle": {
+      "layers": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-headless",
+        "@mingworkbench/capability-pack"
+      ]
+    }
+  }
+}
+EOF
 
-# 3. 安装
-node "<第 1 步找到的 bin.js 路径>" plugin --profile web add @mingworkbench/capability-pack
+# 3. 把本仓库的 dist/ 拷到 profile 的 node_modules
+mkdir -p "$DSH_HOME/profiles/node_modules/@mingworkbench"
+cp -r "/path/to/Ming-Capability-Pack" "$DSH_HOME/profiles/node_modules/@mingworkbench/capability-pack"
 ```
 
-## 使用
+## 快速开始
 
-安装并重启 Harness 后，直接在对话里用自然语言描述你想做的事：
+### 在 Harness 对话框里使用（推荐日常使用）
 
-```
-我：帮我把这个月的账单整理成一个表格，并算出总支出。
-Ming：✅ 完成！已生成 D:/.../账单汇总.csv，总支出 ¥4,213.50
+启动 Harness 并指定 profile：
 
-我：给我做一个摄影作品集网站。
-Ming：✅ 完成！网站已生成 D:/.../portfolio/index.html
+```bash
+dsh --profile <profile名>
 ```
 
-任何能描述的任务都可以：生成网站、处理图片/数据、整理文件、写文档、跑自动化脚本……
+然后在对话框直接用自然语言描述任务：
 
-每次执行后，Ming 会在工作目录下生成一张证据卡（`ming-evidence/evidence-*.json`），
-记录这次的目标、执行方式、产出文件清单和下一步建议。
+```
+我：帮我统计当前目录下所有 .md 文件的总行数
+我：在桌面创建一个 index.html，展示一张简单的欢迎页
+我：把 downloads/ 里超过 30 天的文件整理到 archive/
+```
+
+Ming 会自动调用 `ming_auto` 工具，把任务交给原生子代理执行，
+完成后汇报做了什么、产出了哪些文件、证据卡在哪里。
+
+### 用 CLI 包装器直接执行（适合脚本 / 自动化）
+
+仓库自带 `bin/ming` / `bin/ming.cmd` / `bin/ming.js`，
+可以把自然语言任务一键转发给 Harness：
+
+```bash
+# Unix / Git Bash
+./bin/ming "创建一个 hello.html，内容为 <h1>Hello Ming</h1>"
+
+# Windows CMD / PowerShell
+bin\ming.cmd "创建一个 hello.html，内容为 <h1>Hello Ming</h1>"
+
+# 指定 profile（默认是 ming）
+DSH_PROFILE=web ./bin/ming "整理当前目录文件"
+
+# 指定 dsh bin.js（当自动查找失败时）
+DSH_BIN="E:/claw/DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js" ./bin/ming "帮我做个列表"
+```
+
+CLI 等价于把这句话喂给 Harness：
+
+```bash
+node "$DSH_BIN" --profile <profile名> "请调用 ming_auto 工具：<你的任务描述>"
+```
+
+### Headless 一次性任务（适合验证 / CI）
+
+不进入交互界面，直接跑完退出：
+
+```bash
+dsh --profile <profile名> "请调用 ming_auto 工具：创建一个 hello.html，内容为 <h1>Hello Ming</h1>"
+```
+
+## 验证安装
+
+### 交互式验证
+
+```bash
+dsh --profile <profile名>
+```
+
+输入：
+
+```
+请调用 ming_auto 工具：在当前目录创建 hello.html，内容为 <h1>Hello Ming</h1>
+```
+
+看到类似输出说明成功：
+
+```
+✅ 完成！
+产出：
+  - d:\openAI\dsh\hello.html
+证据卡：
+  - d:\openAI\dsh\ming-evidence\evidence-*.json
+```
+
+### CLI 冒烟验证
+
+```bash
+./bin/ming "在当前目录创建 hello.html，内容为 <h1>Hello Ming</h1>"
+```
+
+### 开发者：npm scripts
+
+```bash
+npm run typecheck   # TypeScript 类型检查
+npm run build       # 构建 dist/
+npm run smoke       # 冒烟：typecheck + build + 可选真机验证
+```
+
+`npm run smoke` 会先跑 `typecheck` 和 `build`，若配置了 `DSH_HOME` 与 `DSH_BIN`，
+还会追加一次 headless 真机调用，确认 `ming_auto` 真正产出文件。
 
 ## 工作原理
 
 ```
 自然语言目标
       ↓
-ming_auto 工具（Ming 的入口，一键转交）
+ming_auto 工具（Ming 的薄转发入口）
       ↓
-Harness 原生子代理（理解 + 规划 + 执行）
+Harness 原生子代理（理解 + 规划 + 执行，自带 LLM 与工具）
       ↓
 真实产物（文件 / 网页 / 脚本 / 数据）
       ↓
@@ -96,28 +183,68 @@ Harness 原生子代理（理解 + 规划 + 执行）
 核心原则：**不重复造轮子**。意图理解、步骤规划、任务执行全部复用 Harness 已具备的
 能力，Ming 只是一个薄薄的适配层，负责「接收自然语言 → 转交原生 Agent → 收集结果」。
 
-## 代码结构
+## 递归防护
 
-| 文件 | 职责 |
+为了防止子代理无限委派，Ming 做了两层硬隔离：
+
+1. **工具层**：子代理启动时传 `toolFilter: { deny: ['ming_auto'] }`，子代理的工具列表里根本看不到 `ming_auto`。
+2. **提示词层**：prompt 明确要求"不要调用 ming_auto，也不要再次把任务转交他人"。
+
+## 项目结构
+
+| 文件 / 目录 | 职责 |
 | --- | --- |
-| `src/index.ts` | 插件入口，注册 `ming_auto` 工具 |
+| `src/index.ts` | 插件入口，注册 `ming_auto` 工具 + 注入 systemPrompt |
 | `src/tools/ming-auto.ts` | 工具定义（goal + resources → 结构化结果） |
 | `src/services/executor.ts` | 薄转发器：调用原生子代理执行 |
 | `src/services/evidence-collector.ts` | 写证据卡 |
 | `src/types.ts` | 类型定义 |
+| `bin/ming.js` | 跨平台 Node CLI 包装器 |
+| `bin/ming` | Unix shell 包装器 |
+| `bin/ming.cmd` | Windows CMD 包装器 |
 | `cordis.patch.yml` | bundle patch 层（让 `dsh plugin add` 识别并激活本插件） |
+| `scripts/smoke.js` | 冒烟验证脚本 |
 
 ## 开发
 
 ```bash
 git clone https://github.com/YuemingHub/Ming-Capability-Pack.git
 cd Ming-Capability-Pack
-npm install       # 安装依赖
-npm run build     # 构建（产出 dist/）
-npm run typecheck # 类型检查
+npm install
+npm run build
+npm run typecheck
+npm run smoke
 ```
 
-详见 [DEVELOPMENT.md](DEVELOPMENT.md) 与 [DESIGN.md](DESIGN.md)。
+## 常见问题
+
+### `dsh` 不在 PATH
+
+桌面版 Harness 的 `dsh` 没有注册成全局命令。直接用 Node 运行 bin.js：
+
+```bash
+node "E:/claw/DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js" --profile ming "你的任务"
+```
+
+或设置 `DSH_BIN` 环境变量后使用 `bin/ming`：
+
+```bash
+export DSH_BIN="E:/claw/DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js"
+./bin/ming "你的任务"
+```
+
+### `DSH_HOME` 在哪
+
+Harness 数据目录，默认：
+
+- Windows：`%USERPROFILE%\.dsh`
+- macOS / Linux：`~/.dsh`
+
+里面包含 `profiles/` 和 `profiles/node_modules/`。
+
+### 子代理会不会无限递归
+
+不会。见上方「递归防护」。
 
 ## 贡献
 
@@ -125,4 +252,4 @@ npm run typecheck # 类型检查
 
 ## 许可证
 
-MIT License - 详见 [LICENSE](LICENSE)。
+MIT License - 详见 [LICENSE](LICENSE).

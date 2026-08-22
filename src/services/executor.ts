@@ -66,6 +66,10 @@ async function executeViaSubagent(
       prompt: [{ type: 'text', text: prompt }],
       parent: exec.agent,
       signal: exec.signal,
+      // 显式锁定工作目录：让子代理落盘到当前会话工作区，而非 host 进程 cwd
+      cwd: resolveWorkdir(exec),
+      // 工具层硬隔离递归：子代理看不到 ming_auto，绝不会再次委派给自己
+      toolFilter: { deny: ['ming_auto'] },
     })
 
     let result: Awaited<SubagentRun['result']>
@@ -116,6 +120,7 @@ function buildPrompt(goal: string, resources: string[], workdir: string): string
   const lines: string[] = [
     '你是 Ming 的执行助手。请完整地完成下面的任务，并产出真实结果（文件、脚本、网页等），不要只给建议。',
     '你可以使用可用的工具（读写文件、执行命令、子代理等）来完成它。',
+    '重要：你正在执行一个被委派的具体任务，直接完成它；不要调用 ming_auto 工具，也不要再次把任务转交他人。',
     '',
     `【用户目标】\n${goal}`,
   ]

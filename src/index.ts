@@ -30,6 +30,7 @@ export async function apply(ctx: Context): Promise<void> {
         '例如：做一个网站、处理一批数据、整理文件、写文档、跑自动化流程、生成报表等。',
         '把用户的目标原样写进 goal 参数（一句话或一段话）；如有相关的文件路径或 URL，填进 resources。',
         'ming_auto 会把目标转交给一个全新的执行子代理，由它真正执行并产出真实文件；完成后按工具返回的产出文件路径向用户汇报。',
+        '注意：如果你自身就是被 ming_auto 委派去执行具体子任务的子代理，不要再次调用本工具（你的工具列表里也不会出现它）。',
       ].join('\n'),
     })
     ctx.logger.info('✅ ming_auto 工具已注册')
