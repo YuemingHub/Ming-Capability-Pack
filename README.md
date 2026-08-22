@@ -26,7 +26,13 @@ Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真�
    powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://registry.npmmirror.com/@mingworkbench/capability-pack/-/capability-pack-0.6.0.tgz | tar -xzO package/scripts/install-ming.ps1 | iex"
    ```
 
-   > 能访问 GitHub 的话，也可以用这条（内容完全一样）：
+   > 如果镜像还没同步，用官方源这条（内容完全一样）：
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.0.tgz | tar -xzO package/scripts/install-ming.ps1 | iex"
+   ```
+
+   > 能访问 GitHub 的话，也可以用这条：
 
    ```powershell
    powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1 | iex"
