@@ -92,19 +92,22 @@ var RECIPES = [
         key: "theme",
         question: "\u8FD9\u4E2A\u7F51\u7AD9\u4E3B\u8981\u7528\u6765\u505A\u4EC0\u4E48\uFF1F",
         default: "\u4E2A\u4EBA\u4ECB\u7ECD + \u4F5C\u54C1\u5C55\u793A",
-        options: ["\u4E2A\u4EBA\u4ECB\u7ECD + \u4F5C\u54C1\u5C55\u793A", "\u4E2A\u4EBA\u535A\u5BA2", "\u4F5C\u54C1\u96C6 / portfolio", "\u4EA7\u54C1\u843D\u5730\u9875"]
+        options: ["\u4E2A\u4EBA\u4ECB\u7ECD + \u4F5C\u54C1\u5C55\u793A", "\u4E2A\u4EBA\u535A\u5BA2", "\u4F5C\u54C1\u96C6 / portfolio", "\u4EA7\u54C1\u843D\u5730\u9875"],
+        translate: "\u7528\u6237\u8BF4\u300C\u5C55\u793A\u4F5C\u54C1/\u6444\u5F71/\u8BBE\u8BA1/\u753B\u753B\u300D\u2192 \u4F5C\u54C1\u96C6\u7ED3\u6784\uFF08\u9996\u9875 + \u5206\u7C7B + \u4F5C\u54C1\u8BE6\u60C5\uFF09\uFF1B\u300C\u5199\u6587\u7AE0/\u65E5\u8BB0/\u5206\u4EAB\u300D\u2192 \u535A\u5BA2\u7ED3\u6784\uFF08\u6587\u7AE0\u5217\u8868 + \u8BE6\u60C5\u9875\uFF09\uFF1B\u300C\u4ECB\u7ECD\u81EA\u5DF1\u300D\u2192 \u4E2A\u4EBA\u4ECB\u7ECD\uFF08\u5934\u50CF/\u7ECF\u5386/\u8054\u7CFB\u65B9\u5F0F\uFF09\uFF1B\u300C\u5356\u4E1C\u897F/\u63A8\u5E7F\u4EA7\u54C1\u300D\u2192 \u843D\u5730\u9875\uFF08\u4EA7\u54C1\u5356\u70B9 + \u884C\u52A8\u6309\u94AE\uFF09\u3002"
       },
       {
         key: "style",
         question: "\u89C6\u89C9\u98CE\u683C\u504F\u597D\uFF1F",
         default: "\u7B80\u6D01\u73B0\u4EE3",
-        options: ["\u7B80\u6D01\u73B0\u4EE3", "\u6DF1\u8272\u79D1\u6280", "\u6E05\u65B0\u7B80\u7EA6", "\u6742\u5FD7\u98CE"]
+        options: ["\u7B80\u6D01\u73B0\u4EE3", "\u6DF1\u8272\u79D1\u6280", "\u6E05\u65B0\u7B80\u7EA6", "\u6742\u5FD7\u98CE"],
+        translate: "\u7528\u6237\u8BF4\u300C\u6587\u827A/\u6E05\u65B0/\u6E29\u67D4\u300D\u2192 \u6D45\u8272\u80CC\u666F + \u886C\u7EBF/\u624B\u5199\u5B57\u4F53 + \u5927\u56FE\u7559\u767D\uFF1B\u300C\u79D1\u6280/\u6781\u5BA2/\u70AB\u9177\u300D\u2192 \u6DF1\u8272\u80CC\u666F + \u7B49\u5BBD\u5B57\u4F53 + \u9713\u8679\u5F3A\u8C03\u8272\uFF1B\u300C\u7B80\u7EA6/\u9AD8\u7EA7\u300D\u2192 \u5927\u91CF\u7559\u767D + \u65E0\u886C\u7EBF + \u514B\u5236\u914D\u8272\uFF1B\u300C\u6742\u5FD7/\u65F6\u5C1A\u300D\u2192 \u5927\u6807\u9898 + \u5206\u680F\u7F51\u683C + \u56FE\u7247\u4E3A\u4E3B\u3002"
       },
       {
         key: "scope",
         question: "\u8FD9\u6B21\u505A\u5230\u4EC0\u4E48\u7A0B\u5EA6\uFF1F",
         default: "\u5148\u51FA\u53EF\u770B\u7684\u9996\u9875 + 2~3 \u4E2A\u5185\u9875",
-        options: ["\u5148\u51FA\u53EF\u770B\u7684\u9996\u9875 + 2~3 \u4E2A\u5185\u9875", "\u5B8C\u6574\u591A\u9875\u9762\u7AD9\u70B9", "\u53EA\u8981\u4E00\u4E2A\u843D\u5730\u9875"]
+        options: ["\u5148\u51FA\u53EF\u770B\u7684\u9996\u9875 + 2~3 \u4E2A\u5185\u9875", "\u5B8C\u6574\u591A\u9875\u9762\u7AD9\u70B9", "\u53EA\u8981\u4E00\u4E2A\u843D\u5730\u9875"],
+        translate: "\u7528\u6237\u8BF4\u300C\u5148\u770B\u770B/\u5148\u505A\u4E2A\u80FD\u770B\u7684/\u968F\u4FBF\u5148\u5F04\u300D\u2192 \u7528\u9ED8\u8BA4\uFF08\u9996\u9875 + 2~3 \u4E2A\u5185\u9875\uFF09\uFF0C\u5185\u5BB9\u5360\u4F4D\u540E\u8FED\u4EE3\uFF1B\u300C\u5168\u90E8/\u5B8C\u6574/\u6B63\u5F0F\u300D\u2192 \u5B8C\u6574\u7AD9\u70B9\u7ED3\u6784\uFF1B\u300C\u53EA\u8981\u4E00\u9875/\u5355\u9875\u300D\u2192 \u5355\u9875\u843D\u5730\u3002"
       }
     ],
     verification: [
@@ -263,6 +266,42 @@ function formatStrategyOptions(options) {
     lines.push(`  ${o.description}`);
   }
   lines.push("", "\u628A\u9009\u4E2D\u7684 id\uFF08mvp-first / clarify-first\uFF09\u4F20\u7ED9 ming_auto \u7684 strategy \u53C2\u6570\u5373\u53EF\u3002");
+  return lines.join("\n");
+}
+function clarifyStatus(plan, answers) {
+  const questions = plan.questions ?? [];
+  const confirmed = {};
+  const missing = [];
+  for (const q of questions) {
+    const value = answers?.[q.key];
+    if (value && value.trim()) {
+      confirmed[q.key] = value.trim();
+    } else {
+      missing.push({
+        key: q.key,
+        question: q.question,
+        default: q.default,
+        options: q.options,
+        translate: q.translate
+      });
+    }
+  }
+  return { done: missing.length === 0, confirmed, missing };
+}
+function formatClarify(status) {
+  if (status.done) {
+    const parts = Object.entries(status.confirmed).map(([k, v]) => `${k} = ${v}`).join("\u3001");
+    return `\u4FE1\u606F\u591F\u4E86\uFF0C\u5DF2\u786E\u8BA4\uFF1A${parts}\u3002\u53EF\u4EE5\u8C03\u7528 ming_auto\uFF08strategy=clarify-first\uFF0Canswers \u7528\u8FD9\u4E9B\u503C\uFF09\u5F00\u59CB\u505A\u4E86\u3002`;
+  }
+  const lines = [`\u8FD8\u9700\u8981\u786E\u8BA4 ${status.missing.length} \u4E2A\u5173\u952E\u70B9\uFF08\u53EF\u4EE5\u56DE\u7B54\uFF0C\u4E5F\u53EF\u4EE5\u8BF4\u300C\u4F60\u770B\u7740\u529E\u300D\uFF0C\u6211\u4F1A\u7528\u9ED8\u8BA4\u503C\uFF09\uFF1A`, ""];
+  for (const m of status.missing) {
+    const opts = m.options?.length ? `\uFF08${m.options.join(" / ")}\uFF09` : "";
+    lines.push(`- ${m.question}${opts}\uFF5C\u9ED8\u8BA4\uFF1A${m.default}`);
+    if (m.translate) {
+      lines.push(`  \u7FFB\u8BD1\u53C2\u8003\uFF1A${m.translate}`);
+    }
+  }
+  lines.push("", "\u6BCF\u786E\u8BA4\u4E00\u70B9\u5C31\u8C03\u7528\u4E00\u6B21 ming_clarify \u4F20\u5165\u65B0\u7B54\u6848\uFF1B\u90FD\u786E\u8BA4\u4E86\u5B83\u4F1A\u63D0\u793A\u5F00\u59CB\u505A\u3002");
   return lines.join("\n");
 }
 
@@ -735,6 +774,8 @@ export {
   STRATEGY_OPTIONS,
   planExecution,
   formatStrategyOptions,
+  clarifyStatus,
+  formatClarify,
   verifyChecks,
   formatVerification,
   matchesSimplePatternForTest,

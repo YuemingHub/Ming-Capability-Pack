@@ -158,13 +158,16 @@ type VerificationCheck = {
 };
 /** 执行前需要向用户澄清的关键问题（只问必要的，其余用默认值） */
 interface ClarifyQuestion {
-    /** 答案在装配上下文里的键名 */
+    /** 答案在装配上下文里的键名（系统逻辑维度的标识） */
     key: string;
+    /** 用大白话问用户（用户不懂技术，不要用术语） */
     question: string;
     /** 用户不回答时使用的默认值（保证 clarify-first 也能跑） */
     default: string;
     /** 给用户的可选答案（供快速选择，用户也可自由输入） */
     options?: string[];
+    /** 翻译提示：用户类似的大白话回答应翻译成什么系统逻辑，帮主模型把「人话」变成执行要求 */
+    translate?: string;
 }
 /** 执行策略：不同策略走不同的中间件调用链 */
 type StrategyKind = 'mvp-first' | 'clarify-first';
@@ -298,6 +301,30 @@ interface PlanInput {
 declare function planExecution(ctx: Context, input: PlanInput): Promise<ExecutionPlan>;
 /** 把策略选项格式化成给主模型/用户看的文本 */
 declare function formatStrategyOptions(options: StrategyOption[]): string;
+/** 还没确认的决策点（主模型据此继续问用户） */
+interface ClarifyMissing {
+    key: string;
+    question: string;
+    default: string;
+    options?: string[];
+    translate?: string;
+}
+interface ClarifyStatus {
+    /** 信息是否已够（所有决策点都有答案） */
+    done: boolean;
+    /** 已确认的答案（用户大白话 → 系统逻辑的翻译结果） */
+    confirmed: Record<string, string>;
+    /** 还没确认的决策点 */
+    missing: ClarifyMissing[];
+}
+/**
+ * 纯规则澄清引擎：缺什么就报告什么，信息够就 done。
+ * 翻译（把用户的话变成系统逻辑）由主模型完成——它既看得见用户原话，也看得见翻译提示。
+ * 主模型循环：问 missing 里的问题 → 翻译用户回答 → 再调用，直到 done → ming_auto 执行。
+ */
+declare function clarifyStatus(plan: Pick<CapabilityPlan, 'questions'>, answers: Record<string, string> | undefined): ClarifyStatus;
+/** 把澄清状态格式化成给主模型/用户看的文本 */
+declare function formatClarify(status: ClarifyStatus): string;
 
 /**
  * 内置方案包（Recipe）目录
@@ -381,4 +408,4 @@ declare function searchStorePlugins(query: string, opts?: StoreSearchOptions): P
 /** 把搜索结果格式化成给主模型的紧凑文本（含安装命令） */
 declare function formatStoreResult(result: StoreSearchResult, max?: number): string;
 
-export { type ArtifactCheck, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type MingResult, RECIPES, type Recipe, STRATEGY_OPTIONS, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, appendMissingNotice, assembleContext, extractArtifacts, findRecipesByGoal, formatStoreResult, formatStrategyOptions, formatVerification, getRecipe, kindFromStopReason, looksLikeLocalPath, matchesSimplePatternForTest, nextStepsFor, planExecution, recipeCatalog, resolveAnswers, resolveCapabilities, resolveTimeoutMs, resolveWorkdir, searchStorePlugins, stopReasonText, verifyChecks };
+export { type ArtifactCheck, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type MingResult, RECIPES, type Recipe, STRATEGY_OPTIONS, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, appendMissingNotice, assembleContext, clarifyStatus, extractArtifacts, findRecipesByGoal, formatClarify, formatStoreResult, formatStrategyOptions, formatVerification, getRecipe, kindFromStopReason, looksLikeLocalPath, matchesSimplePatternForTest, nextStepsFor, planExecution, recipeCatalog, resolveAnswers, resolveCapabilities, resolveTimeoutMs, resolveWorkdir, searchStorePlugins, stopReasonText, verifyChecks };

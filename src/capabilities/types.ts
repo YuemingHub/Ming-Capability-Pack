@@ -33,13 +33,16 @@ export type VerificationCheck =
 
 /** 执行前需要向用户澄清的关键问题（只问必要的，其余用默认值） */
 export interface ClarifyQuestion {
-  /** 答案在装配上下文里的键名 */
+  /** 答案在装配上下文里的键名（系统逻辑维度的标识） */
   key: string
+  /** 用大白话问用户（用户不懂技术，不要用术语） */
   question: string
   /** 用户不回答时使用的默认值（保证 clarify-first 也能跑） */
   default: string
   /** 给用户的可选答案（供快速选择，用户也可自由输入） */
   options?: string[]
+  /** 翻译提示：用户类似的大白话回答应翻译成什么系统逻辑，帮主模型把「人话」变成执行要求 */
+  translate?: string
 }
 
 /** 执行策略：不同策略走不同的中间件调用链 */

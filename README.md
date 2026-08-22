@@ -202,10 +202,15 @@ Ming 内置若干「方案包」：每个方案声明「触发场景 + 需要的
 | 策略 | 行为 | 中间件调用链 |
 | --- | --- | --- |
 | `mvp-first`（推荐） | 用方案声明的默认值直接做，先出能看的 MVP，看完再迭代 | resolve → assemble(默认值) → execute → verify → evidence |
-| `clarify-first` | 先问方案声明的关键问题（不超过 3 个，含默认值），按答案精确装配再做 | resolve → 收集答案 → assemble(带答案) → execute → verify → evidence |
+| `clarify-first` | 用 `ming_clarify` 对话式核对：缺什么问什么，把用户的大白话翻译成系统逻辑，信息够了就做 | resolve → 多轮澄清(翻译) → assemble(带答案) → execute → verify → evidence |
 
 两条链都汇入 `ming_auto` 执行，区别只在装配上下文是否注入用户答案；
 即使用户不回答澄清问题，`clarify-first` 也会用默认值兜底，绝不卡住等用户。
+
+**翻译层**：用户不懂技术，Ming 替他翻译。每个方案声明「决策点 + 翻译提示」：
+用户说「我想展示摄影作品」→ 翻译成「作品集结构（首页 + 分类 + 详情）」；
+用户说「文艺一点」→ 翻译成「浅色背景 + 衬线字体 + 大图留白」。
+澄清过程中用户随时可以说「你看着办」——用默认值兜底，信息够了立刻开始做。
 
 当前内置方案：
 
@@ -272,6 +277,7 @@ export MING_STORE_KEY=dsh_live_xxxx   # 可选；不配置则匿名请求
 | `src/capabilities/planner.ts` | 策略选择：先跑 MVP / 先对齐需求 + 澄清问题解析 |
 | `src/capabilities/store.ts` | 1024Store 客户端（能力目录外部事实源，网络失败优雅降级） |
 | `src/tools/ming-plan.ts` | `ming_plan` 工具：先给选择（匹配方案 + 策略选项 + 澄清问题） |
+| `src/tools/ming-clarify.ts` | `ming_clarify` 工具：对话式核对（缺什么问什么，翻译用户的话） |
 | `src/tools/ming-auto.ts` | `ming_auto` 工具定义（目标 + strategy/answers → 方案匹配 → 委派 → 独立验证） |
 | `src/tools/ming-catalog.ts` | `ming_catalog` 工具：查看内置方案包 |
 | `src/tools/ming-store.ts` | `ming_store_search` 工具：搜社区插件市场给安装命令 |

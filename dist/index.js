@@ -1,7 +1,9 @@
 import {
   appendMissingNotice,
   assembleContext,
+  clarifyStatus,
   execute,
+  formatClarify,
   formatStoreResult,
   formatStrategyOptions,
   formatVerification,
@@ -13,7 +15,7 @@ import {
   resolveWorkdir,
   searchStorePlugins,
   verifyChecks
-} from "./chunk-4VF5VF3S.js";
+} from "./chunk-VSBFDRXP.js";
 
 // src/tools/ming-auto.ts
 import { defineTool } from "@deepseek-ai/dsh-tools";
@@ -66,7 +68,8 @@ function registerMingAutoTool(ctx) {
 
 \u9002\u5408\uFF1A\u751F\u6210\u7F51\u7AD9\u3001\u5904\u7406\u56FE\u7247/\u6570\u636E\u3001\u6574\u7406\u6587\u4EF6\u3001\u5199\u6587\u6863\u3001\u81EA\u52A8\u5316\u5DE5\u4F5C\u6D41\u7B49\u4EFB\u4F55\u53EF\u63CF\u8FF0\u7684\u4EFB\u52A1\u3002
 \u63D0\u793A\uFF1A\u5148\u8C03\u7528 ming_plan \u67E5\u770B\u7B56\u7565\u9009\u62E9\uFF08\u5148\u8DD1 MVP / \u5148\u5BF9\u9F50\u9700\u6C42\uFF09\uFF0C\u518D\u6309\u7528\u6237\u9009\u62E9\u628A strategy \u4F20\u8FDB\u6765\uFF1B
-\u4E5F\u53EF\u76F4\u63A5\u6307\u5B9A recipe \u65B9\u6848 id\u3002\u5C3D\u91CF\u8BF4\u6E05\u300C\u60F3\u8981\u4EC0\u4E48\u7ED3\u679C\u300D\uFF0C\u53EF\u9644\u5E26\u6587\u4EF6\u8DEF\u5F84\u6216 URL\u3002`,
+\u9009 clarify-first \u65F6\u5148\u7528 ming_clarify \u5BF9\u8BDD\u5F0F\u6838\u5BF9\uFF0C\u628A\u7FFB\u8BD1\u6210\u7CFB\u7EDF\u903B\u8F91\u7684\u7B54\u6848\u653E\u8FDB answers \u518D\u6267\u884C\u3002
+\u4E5F\u53EF\u76F4\u63A5\u6307\u5B9A recipe \u65B9\u6848 id\u3002`,
     parameters: {
       goal: {
         type: "string",
@@ -85,12 +88,12 @@ function registerMingAutoTool(ctx) {
       strategy: {
         type: "string",
         enum: ["mvp-first", "clarify-first"],
-        description: "\u53EF\u9009\uFF1A\u6267\u884C\u7B56\u7565\u3002mvp-first \u7528\u9ED8\u8BA4\u503C\u76F4\u63A5\u505A\uFF08\u9ED8\u8BA4\uFF09\uFF1Bclarify-first \u7528\u7528\u6237\u5DF2\u786E\u8BA4\u7684\u7B54\u6848\u88C5\u914D\u540E\u518D\u505A"
+        description: "\u53EF\u9009\uFF1A\u6267\u884C\u7B56\u7565\u3002mvp-first \u7528\u9ED8\u8BA4\u503C\u76F4\u63A5\u505A\uFF08\u9ED8\u8BA4\uFF09\uFF1Bclarify-first \u7528 ming_clarify \u6838\u5BF9\u540E\u7FFB\u8BD1\u6210\u7684\u7CFB\u7EDF\u903B\u8F91\u7B54\u6848\u88C5\u914D\u518D\u505A"
       },
       answers: {
         type: "object",
         additionalProperties: true,
-        description: "\u53EF\u9009\uFF1Aclarify-first \u65F6\u7528\u6237\u786E\u8BA4\u7684\u7B54\u6848\uFF08\u952E\u503C\u5BF9\uFF0C\u952E\u5BF9\u5E94 ming_plan \u8FD4\u56DE\u7684\u6F84\u6E05\u95EE\u9898 key\uFF09\uFF1B\u7F3A\u5931\u9879\u7528\u9ED8\u8BA4\u503C"
+        description: "\u53EF\u9009\uFF1Aclarify-first \u65F6\u7ECF ming_clarify \u6838\u5BF9\u5E76\u7FFB\u8BD1\u6210\u7CFB\u7EDF\u903B\u8F91\u7684\u7B54\u6848\uFF08\u952E\u503C\u5BF9\uFF09\uFF1B\u7F3A\u5931\u9879\u7528\u9ED8\u8BA4\u503C"
       }
     },
     output: {
@@ -232,10 +235,50 @@ function registerMingCatalogTool(ctx) {
   }));
 }
 
+// src/tools/ming-clarify.ts
+import { defineTool as defineTool3 } from "@deepseek-ai/dsh-tools";
+function registerMingClarifyTool(ctx) {
+  ctx.tools.register(defineTool3({
+    name: "ming_clarify",
+    description: "Ming \u6F84\u6E05\uFF1A\u7528\u6237\u9009\u4E86\u300C\u5148\u5BF9\u9F50\u9700\u6C42\u518D\u505A\u300D\u540E\uFF0C\u7528\u5B83\u505A\u5BF9\u8BDD\u5F0F\u6838\u5BF9\u3002\u4F20\u5165\u7528\u6237\u6700\u65B0\u56DE\u7B54\u7FFB\u8BD1\u540E\u7684\u7B54\u6848\uFF08answers\uFF09\uFF0C\u8FD4\u56DE\u8FD8\u7F3A\u54EA\u4E9B\u5173\u952E\u70B9\uFF08\u542B\u95EE\u9898/\u9009\u9879/\u9ED8\u8BA4\u503C/\u7FFB\u8BD1\u63D0\u793A\uFF09\u3002\u628A\u7F3A\u7684\u95EE\u7528\u6237\uFF0C\u628A\u7528\u6237\u7684\u5927\u767D\u8BDD\u7FFB\u8BD1\u6210\u7CFB\u7EDF\u903B\u8F91\u518D\u4F20\u56DE\u6765\uFF1B\u8FD4\u56DE done=true \u65F6\u4FE1\u606F\u591F\u4E86\uFF0C\u628A\u8FD9\u4E9B answers \u4F20\u7ED9 ming_auto\uFF08strategy=clarify-first\uFF09\u5F00\u59CB\u505A\u3002\u53EA\u6838\u5BF9\uFF0C\u4E0D\u6267\u884C\u3002",
+    parameters: {
+      goal: {
+        type: "string",
+        required: true,
+        description: "\u7528\u6237\u60F3\u5B8C\u6210\u7684\u76EE\u6807\uFF08\u81EA\u7136\u8BED\u8A00\uFF09"
+      },
+      recipe: {
+        type: "string",
+        description: "\u53EF\u9009\uFF1A\u5DF2\u901A\u8FC7 ming_catalog \u786E\u8BA4\u7684\u65B9\u6848 id"
+      },
+      answers: {
+        type: "object",
+        additionalProperties: true,
+        description: "\u7528\u6237\u6700\u65B0\u56DE\u7B54\u7FFB\u8BD1\u540E\u7684\u7B54\u6848\uFF08\u952E\u503C\u5BF9\uFF0C\u952E\u5BF9\u5E94\u4E0A\u4E00\u8F6E\u8FD4\u56DE\u7684 missing.key\uFF09\uFF1B\u53EF\u53EA\u4F20\u65B0\u589E\u7684"
+      }
+    },
+    output: {
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          text: { type: "string", required: true }
+        }
+      },
+      render: (_args, value) => [{ type: "text", text: value.text }]
+    },
+    async execute(args) {
+      const plan = await resolveCapabilities(ctx, { goal: args.goal, recipeId: args.recipe });
+      const status = clarifyStatus(plan, args.answers);
+      return { text: formatClarify(status) };
+    }
+  }));
+}
+
 // src/tools/ming-history.ts
 import { readFile, readdir } from "fs/promises";
 import { join as join2 } from "path";
-import { defineTool as defineTool3 } from "@deepseek-ai/dsh-tools";
+import { defineTool as defineTool4 } from "@deepseek-ai/dsh-tools";
 var DEFAULT_LIMIT = 10;
 var MAX_LIMIT = 50;
 function truncate(text, max) {
@@ -262,7 +305,7 @@ function formatResult2(value) {
   return lines.join("\n");
 }
 function registerMingHistoryTool(ctx) {
-  ctx.tools.register(defineTool3({
+  ctx.tools.register(defineTool4({
     name: "ming_history",
     description: `Ming \u5386\u53F2\u67E5\u8BE2\uFF1A\u67E5\u770B\u4E4B\u524D\u901A\u8FC7 ming_auto \u5B8C\u6210\u8FC7\u7684\u4EFB\u52A1\u8BB0\u5F55\uFF08\u65F6\u95F4\u3001\u76EE\u6807\u3001\u6210\u8D25\u3001\u4EA7\u7269\u6570\u91CF\u3001\u8017\u65F6\uFF09\u3002
 
@@ -346,7 +389,7 @@ function registerMingHistoryTool(ctx) {
 }
 
 // src/tools/ming-plan.ts
-import { defineTool as defineTool4 } from "@deepseek-ai/dsh-tools";
+import { defineTool as defineTool5 } from "@deepseek-ai/dsh-tools";
 function formatPlan(ep) {
   const lines = [];
   const p = ep.plan;
@@ -366,7 +409,7 @@ function formatPlan(ep) {
   return lines.join("\n");
 }
 function registerMingPlanTool(ctx) {
-  ctx.tools.register(defineTool4({
+  ctx.tools.register(defineTool5({
     name: "ming_plan",
     description: "Ming \u89C4\u5212\uFF1A\u7528\u6237\u521A\u63D0\u51FA\u4E00\u4E2A\u76EE\u6807\u65F6\uFF0C\u5148\u8C03\u7528\u672C\u5DE5\u5177\u89C4\u5212\u6267\u884C\u65B9\u5F0F\u2014\u2014\u8FD4\u56DE\u5339\u914D\u7684\u65B9\u6848\u3001\u4E24\u4E2A\u7B56\u7565\u9009\u9879\uFF08\u5148\u8DD1 MVP / \u5148\u5BF9\u9F50\u9700\u6C42\uFF09\u4E0E\u9700\u8981\u786E\u8BA4\u7684\u5173\u952E\u95EE\u9898\u3002\u628A\u9009\u9879\u5448\u73B0\u7ED9\u7528\u6237\u9009\u5B9A\u540E\uFF0C\u518D\u8C03\u7528 ming_auto\uFF08\u5E26\u4E0A strategy\uFF0C\u5FC5\u8981\u65F6\u5E26 answers\uFF09\u771F\u6B63\u6267\u884C\u3002\u672C\u5DE5\u5177\u53EA\u89C4\u5212\u4E0D\u6267\u884C\u3002",
     parameters: {
@@ -398,9 +441,9 @@ function registerMingPlanTool(ctx) {
 }
 
 // src/tools/ming-store.ts
-import { defineTool as defineTool5 } from "@deepseek-ai/dsh-tools";
+import { defineTool as defineTool6 } from "@deepseek-ai/dsh-tools";
 function registerMingStoreTool(ctx) {
-  ctx.tools.register(defineTool5({
+  ctx.tools.register(defineTool6({
     name: "ming_store_search",
     description: "\u641C\u7D22 DSH 1024Store \u793E\u533A\u63D2\u4EF6\u5E02\u573A\uFF0C\u67E5\u627E\u67D0\u4E2A\u80FD\u529B\u5BF9\u5E94\u7684\u53EF\u5B89\u88C5\u63D2\u4EF6\u3002\u5F53\u7528\u6237\u8981\u6C42\u7684\u80FD\u529B\u672C\u673A\u5C1A\u672A\u88C5\u914D\uFF08\u5982\u7F3A\u5C11\u67D0\u4E2A\u6587\u6863\u89E3\u6790\u3001Office \u5904\u7406\u3001\u6570\u636E\u6293\u53D6\u63D2\u4EF6\uFF09\u65F6\uFF0C\u5148\u7528\u672C\u5DE5\u5177\u641C\u7D22\u66FF\u4EE3\u63D2\u4EF6\uFF0C\u628A\u8FD4\u56DE\u7684\u5B89\u88C5\u547D\u4EE4\u4EA4\u7ED9\u7528\u6237\u786E\u8BA4\u540E\u518D\u88C5\u914D\u3002",
     parameters: {
@@ -449,6 +492,7 @@ async function apply(ctx) {
   try {
     registerMingAutoTool(ctx);
     registerMingCatalogTool(ctx);
+    registerMingClarifyTool(ctx);
     registerMingHistoryTool(ctx);
     registerMingPlanTool(ctx);
     registerMingStoreTool(ctx);
@@ -458,6 +502,10 @@ async function apply(ctx) {
       text: [
         "\u5F53\u7528\u6237\u7528\u81EA\u7136\u8BED\u8A00\u63CF\u8FF0\u300C\u60F3\u5B8C\u6210\u7684\u4E8B\u60C5\u300D\u65F6\uFF0C\u5148\u8C03\u7528 ming_plan \u89C4\u5212\u6267\u884C\u65B9\u5F0F\uFF08\u5339\u914D\u65B9\u6848 + \u7B56\u7565\u9009\u62E9\uFF1A\u5148\u8DD1 MVP / \u5148\u5BF9\u9F50\u9700\u6C42\uFF09\uFF0C",
         "\u628A\u9009\u9879\u5448\u73B0\u7ED9\u7528\u6237\u9009\u5B9A\u540E\uFF0C\u518D\u8C03\u7528 ming_auto \u771F\u6B63\u5B8C\u6210\u5B83\uFF08\u5E26\u4E0A\u7528\u6237\u9009\u62E9\u7684 strategy\uFF0C\u5FC5\u8981\u65F6\u5E26\u4E0A\u786E\u8BA4\u7684 answers\uFF09\u3002",
+        "\u5982\u679C\u7528\u6237\u9009\u300C\u5148\u5BF9\u9F50\u9700\u6C42\u518D\u505A\u300D\uFF08clarify-first\uFF09\uFF1A\u7528 ming_clarify \u505A\u5BF9\u8BDD\u5F0F\u6838\u5BF9\u2014\u2014",
+        "\u4E00\u6B21\u53EA\u95EE\u4E00\u4E2A\u6700\u5173\u952E\u7684\u95EE\u9898\u3001\u7ED9\u9009\u9879\u8BA9\u7528\u6237\u6311\uFF0C\u628A\u7528\u6237\u7684\u5927\u767D\u8BDD\u7FFB\u8BD1\u6210\u7CFB\u7EDF\u903B\u8F91\u7B54\u6848\uFF08\u5982\u300C\u6587\u827A\u70B9\u300D\u2192 \u6D45\u8272\u80CC\u666F+\u886C\u7EBF\u5B57\u4F53+\u5927\u56FE\u7559\u767D\uFF09\uFF0C",
+        "\u6BCF\u786E\u8BA4\u4E00\u70B9\u8C03\u7528\u4E00\u6B21 ming_clarify \u4F20\u5165\u65B0\u7B54\u6848\uFF1B\u4FE1\u606F\u591F\u4E86\uFF08\u7528\u6237\u8BF4\u300C\u4F60\u770B\u7740\u529E\u300D\u6216\u5173\u952E\u70B9\u5DF2\u9F50\uFF09\u5C31\u7ACB\u523B\u7528\u9ED8\u8BA4\u503C\u8865\u5168\u5E76\u8C03 ming_auto \u5F00\u59CB\u505A\uFF0C\u4E0D\u8981\u53CD\u590D\u8FFD\u95EE\u3002",
+        "\u7528\u6237\u4E0D\u61C2\u6280\u672F\uFF1A\u6C38\u8FDC\u7528\u5927\u767D\u8BDD\u95EE\uFF0C\u7ED9\u9ED8\u8BA4\u503C\u515C\u5E95\uFF0C\u4E0D\u8981\u7528\u4EFB\u4F55\u672F\u8BED\uFF08HTML\u3001\u90E8\u7F72\u3001\u540E\u7AEF\u7B49\uFF09\u3002",
         "\u4F8B\u5982\uFF1A\u505A\u4E00\u4E2A\u7F51\u7AD9\u3001\u5904\u7406\u4E00\u6279\u6570\u636E\u3001\u6574\u7406\u6587\u4EF6\u3001\u5199\u6587\u6863\u3001\u8DD1\u81EA\u52A8\u5316\u6D41\u7A0B\u3001\u751F\u6210\u62A5\u8868\u7B49\u3002",
         "\u628A\u7528\u6237\u7684\u76EE\u6807\u539F\u6837\u5199\u8FDB goal \u53C2\u6570\uFF08\u4E00\u53E5\u8BDD\u6216\u4E00\u6BB5\u8BDD\uFF09\uFF1B\u5982\u6709\u76F8\u5173\u7684\u6587\u4EF6\u8DEF\u5F84\u6216 URL\uFF0C\u586B\u8FDB resources\u3002",
         "ming_auto \u4F1A\u628A\u76EE\u6807\u8F6C\u4EA4\u7ED9\u4E00\u4E2A\u5168\u65B0\u7684\u6267\u884C\u5B50\u4EE3\u7406\uFF0C\u7531\u5B83\u771F\u6B63\u6267\u884C\u5E76\u4EA7\u51FA\u771F\u5B9E\u6587\u4EF6\uFF1B\u5B8C\u6210\u540E\u6309\u5DE5\u5177\u8FD4\u56DE\u7684\u4EA7\u51FA\u6587\u4EF6\u8DEF\u5F84\u5411\u7528\u6237\u6C47\u62A5\u3002",
@@ -467,7 +515,7 @@ async function apply(ctx) {
         "\u6CE8\u610F\uFF1A\u5982\u679C\u4F60\u81EA\u8EAB\u5C31\u662F\u88AB ming_auto \u59D4\u6D3E\u53BB\u6267\u884C\u5177\u4F53\u5B50\u4EFB\u52A1\u7684\u5B50\u4EE3\u7406\uFF0C\u4E0D\u8981\u518D\u6B21\u8C03\u7528\u672C\u5DE5\u5177\uFF08\u4F60\u7684\u5DE5\u5177\u5217\u8868\u91CC\u4E5F\u4E0D\u4F1A\u51FA\u73B0\u5B83\uFF09\u3002"
       ].join("\n")
     });
-    ctx.logger.info("\u2705 ming_plan / ming_auto / ming_catalog / ming_history / ming_store_search \u5DE5\u5177\u5DF2\u6CE8\u518C");
+    ctx.logger.info("\u2705 ming_plan / ming_clarify / ming_auto / ming_catalog / ming_history / ming_store_search \u5DE5\u5177\u5DF2\u6CE8\u518C");
     ctx.logger.info("\u{1F4A1} \u76F4\u63A5\u63CF\u8FF0\u4F60\u60F3\u505A\u7684\u4E8B\uFF0CMing \u4F1A\u5E2E\u4F60\u771F\u6B63\u5B8C\u6210");
   } catch (error) {
     ctx.logger.error("\u274C Ming Capability Pack \u52A0\u8F7D\u5931\u8D25", error);

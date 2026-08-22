@@ -57,7 +57,8 @@ export function registerMingAutoTool(ctx: Context): void {
 
 适合：生成网站、处理图片/数据、整理文件、写文档、自动化工作流等任何可描述的任务。
 提示：先调用 ming_plan 查看策略选择（先跑 MVP / 先对齐需求），再按用户选择把 strategy 传进来；
-也可直接指定 recipe 方案 id。尽量说清「想要什么结果」，可附带文件路径或 URL。`,
+选 clarify-first 时先用 ming_clarify 对话式核对，把翻译成系统逻辑的答案放进 answers 再执行。
+也可直接指定 recipe 方案 id。`,
 
     parameters: {
       goal: {
@@ -77,12 +78,12 @@ export function registerMingAutoTool(ctx: Context): void {
       strategy: {
         type: 'string',
         enum: ['mvp-first', 'clarify-first'] as const,
-        description: '可选：执行策略。mvp-first 用默认值直接做（默认）；clarify-first 用用户已确认的答案装配后再做',
+        description: '可选：执行策略。mvp-first 用默认值直接做（默认）；clarify-first 用 ming_clarify 核对后翻译成的系统逻辑答案装配再做',
       },
       answers: {
         type: 'object',
         additionalProperties: true,
-        description: '可选：clarify-first 时用户确认的答案（键值对，键对应 ming_plan 返回的澄清问题 key）；缺失项用默认值',
+        description: '可选：clarify-first 时经 ming_clarify 核对并翻译成系统逻辑的答案（键值对）；缺失项用默认值',
       },
     },
 

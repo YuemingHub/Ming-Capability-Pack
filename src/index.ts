@@ -8,6 +8,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { registerMingAutoTool } from './tools/ming-auto.js'
 import { registerMingCatalogTool } from './tools/ming-catalog.js'
+import { registerMingClarifyTool } from './tools/ming-clarify.js'
 import { registerMingHistoryTool } from './tools/ming-history.js'
 import { registerMingPlanTool } from './tools/ming-plan.js'
 import { registerMingStoreTool } from './tools/ming-store.js'
@@ -27,6 +28,7 @@ export async function apply(ctx: Context): Promise<void> {
   try {
     registerMingAutoTool(ctx)
     registerMingCatalogTool(ctx)
+    registerMingClarifyTool(ctx)
     registerMingHistoryTool(ctx)
     registerMingPlanTool(ctx)
     registerMingStoreTool(ctx)
@@ -36,6 +38,10 @@ export async function apply(ctx: Context): Promise<void> {
       text: [
         '当用户用自然语言描述「想完成的事情」时，先调用 ming_plan 规划执行方式（匹配方案 + 策略选择：先跑 MVP / 先对齐需求），',
         '把选项呈现给用户选定后，再调用 ming_auto 真正完成它（带上用户选择的 strategy，必要时带上确认的 answers）。',
+        '如果用户选「先对齐需求再做」（clarify-first）：用 ming_clarify 做对话式核对——',
+        '一次只问一个最关键的问题、给选项让用户挑，把用户的大白话翻译成系统逻辑答案（如「文艺点」→ 浅色背景+衬线字体+大图留白），',
+        '每确认一点调用一次 ming_clarify 传入新答案；信息够了（用户说「你看着办」或关键点已齐）就立刻用默认值补全并调 ming_auto 开始做，不要反复追问。',
+        '用户不懂技术：永远用大白话问，给默认值兜底，不要用任何术语（HTML、部署、后端等）。',
         '例如：做一个网站、处理一批数据、整理文件、写文档、跑自动化流程、生成报表等。',
         '把用户的目标原样写进 goal 参数（一句话或一段话）；如有相关的文件路径或 URL，填进 resources。',
         'ming_auto 会把目标转交给一个全新的执行子代理，由它真正执行并产出真实文件；完成后按工具返回的产出文件路径向用户汇报。',
@@ -45,7 +51,7 @@ export async function apply(ctx: Context): Promise<void> {
         '注意：如果你自身就是被 ming_auto 委派去执行具体子任务的子代理，不要再次调用本工具（你的工具列表里也不会出现它）。',
       ].join('\n'),
     })
-    ctx.logger.info('✅ ming_plan / ming_auto / ming_catalog / ming_history / ming_store_search 工具已注册')
+    ctx.logger.info('✅ ming_plan / ming_clarify / ming_auto / ming_catalog / ming_history / ming_store_search 工具已注册')
     ctx.logger.info('💡 直接描述你想做的事，Ming 会帮你真正完成')
   } catch (error) {
     ctx.logger.error('❌ Ming Capability Pack 加载失败', error)

@@ -10,6 +10,8 @@ import {
   recipeCatalog,
   resolveCapabilities,
   planExecution,
+  clarifyStatus,
+  formatClarify,
   resolveAnswers,
   STRATEGY_OPTIONS,
   verifyChecks,
@@ -94,6 +96,69 @@ test('assembleContext 注入用户确认的方向', () => {
 
 test('STRATEGY_OPTIONS 导出两个固定策略', () => {
   assert.equal(STRATEGY_OPTIONS.length, 2)
+})
+
+// ---------- 对话式澄清（clarify-first）----------
+
+test('clarifyStatus 缺什么报告什么，信息够就 done', () => {
+  const plan = {
+    questions: [
+      { key: 'theme', question: '用途？', default: '作品展示' },
+      { key: 'style', question: '风格？', default: '简洁' },
+      { key: 'scope', question: '范围？', default: '首页' },
+    ],
+  }
+  const s1 = clarifyStatus(plan, {})
+  assert.equal(s1.done, false)
+  assert.deepEqual(s1.missing.map(m => m.key), ['theme', 'style', 'scope'])
+  assert.deepEqual(s1.confirmed, {})
+
+  const s2 = clarifyStatus(plan, { theme: '个人博客', style: '文艺清新' })
+  assert.equal(s2.done, false)
+  assert.deepEqual(s2.confirmed, { theme: '个人博客', style: '文艺清新' })
+  assert.deepEqual(s2.missing.map(m => m.key), ['scope'])
+
+  const s3 = clarifyStatus(plan, { theme: '个人博客', style: '文艺清新', scope: '单页' })
+  assert.equal(s3.done, true)
+  assert.equal(s3.missing.length, 0)
+})
+
+test('clarifyStatus 空回答视为未确认', () => {
+  const plan = { questions: [{ key: 'theme', question: '用途？', default: '作品展示' }] }
+  const s = clarifyStatus(plan, { theme: '  ' })
+  assert.equal(s.done, false)
+  assert.equal(s.missing.length, 1)
+})
+
+test('clarifyStatus 无问题时立即 done', () => {
+  const s = clarifyStatus({ questions: [] }, {})
+  assert.equal(s.done, true)
+})
+
+test('personal-site 澄清问题带翻译提示', () => {
+  const r = getRecipe('personal-site')
+  assert.ok(r)
+  assert.ok(r.questions.every(q => q.translate))
+  assert.match(r.questions.find(q => q.key === 'style').translate, /文艺/)
+})
+
+test('formatClarify 未完成时给出问题与翻译参考', () => {
+  const plan = {
+    questions: [{ key: 'theme', question: '网站用途？', default: '作品展示', translate: '展示作品→作品集' }],
+  }
+  const s = clarifyStatus(plan, {})
+  const text = formatClarify(s)
+  assert.match(text, /网站用途/)
+  assert.match(text, /翻译参考/)
+  assert.match(text, /你看着办/)
+})
+
+test('formatClarify 完成时提示开始做', () => {
+  const plan = { questions: [{ key: 'theme', question: '用途？', default: '作品展示' }] }
+  const s = clarifyStatus(plan, { theme: '个人博客' })
+  const text = formatClarify(s)
+  assert.match(text, /信息够了/)
+  assert.match(text, /theme = 个人博客/)
 })
 
 // ---------- Resolver ----------

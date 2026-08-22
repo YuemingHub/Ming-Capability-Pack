@@ -79,3 +79,71 @@ export function formatStrategyOptions(options: StrategyOption[]): string {
   lines.push('', '把选中的 id（mvp-first / clarify-first）传给 ming_auto 的 strategy 参数即可。')
   return lines.join('\n')
 }
+
+// ---------- 对话式澄清（clarify-first）----------
+
+/** 还没确认的决策点（主模型据此继续问用户） */
+export interface ClarifyMissing {
+  key: string
+  question: string
+  default: string
+  options?: string[]
+  translate?: string
+}
+
+export interface ClarifyStatus {
+  /** 信息是否已够（所有决策点都有答案） */
+  done: boolean
+  /** 已确认的答案（用户大白话 → 系统逻辑的翻译结果） */
+  confirmed: Record<string, string>
+  /** 还没确认的决策点 */
+  missing: ClarifyMissing[]
+}
+
+/**
+ * 纯规则澄清引擎：缺什么就报告什么，信息够就 done。
+ * 翻译（把用户的话变成系统逻辑）由主模型完成——它既看得见用户原话，也看得见翻译提示。
+ * 主模型循环：问 missing 里的问题 → 翻译用户回答 → 再调用，直到 done → ming_auto 执行。
+ */
+export function clarifyStatus(
+  plan: Pick<CapabilityPlan, 'questions'>,
+  answers: Record<string, string> | undefined,
+): ClarifyStatus {
+  const questions = plan.questions ?? []
+  const confirmed: Record<string, string> = {}
+  const missing: ClarifyMissing[] = []
+  for (const q of questions) {
+    const value = answers?.[q.key]
+    if (value && value.trim()) {
+      confirmed[q.key] = value.trim()
+    } else {
+      missing.push({
+        key: q.key,
+        question: q.question,
+        default: q.default,
+        options: q.options,
+        translate: q.translate,
+      })
+    }
+  }
+  return { done: missing.length === 0, confirmed, missing }
+}
+
+/** 把澄清状态格式化成给主模型/用户看的文本 */
+export function formatClarify(status: ClarifyStatus): string {
+  if (status.done) {
+    const parts = Object.entries(status.confirmed).map(([k, v]) => `${k} = ${v}`).join('、')
+    return `信息够了，已确认：${parts}。可以调用 ming_auto（strategy=clarify-first，answers 用这些值）开始做了。`
+  }
+
+  const lines = [`还需要确认 ${status.missing.length} 个关键点（可以回答，也可以说「你看着办」，我会用默认值）：`, '']
+  for (const m of status.missing) {
+    const opts = m.options?.length ? `（${m.options.join(' / ')}）` : ''
+    lines.push(`- ${m.question}${opts}｜默认：${m.default}`)
+    if (m.translate) {
+      lines.push(`  翻译参考：${m.translate}`)
+    }
+  }
+  lines.push('', '每确认一点就调用一次 ming_clarify 传入新答案；都确认了它会提示开始做。')
+  return lines.join('\n')
+}
