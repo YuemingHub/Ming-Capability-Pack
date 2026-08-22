@@ -20,23 +20,25 @@ Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真�
 > 安装全程走国内镜像（npmmirror），不需要访问 GitHub。
 
 1. **下载安装 DSH Desktop**（[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 桌面版），打开一次完成登录（让对话框能正常回复你）。
-2. **复制下面这一条命令**，粘贴到 PowerShell（开始菜单搜索 PowerShell 打开）并回车：
+2. **复制下面这一条命令**，粘贴到 PowerShell 并回车（开始菜单搜索「PowerShell」打开，直接粘贴下面整行，**不需要加任何前缀**）：
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -c "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.1.tgz' -OutFile $t;$s=(& tar -xzOf $t 'package/scripts/install-ming.ps1')|Out-String -Width 1000;iex $s"
+   [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.2.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
    ```
 
    > 国内镜像同步后，用下面这条更快（内容完全一样）：
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -c "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmmirror.com/@mingworkbench/capability-pack/-/capability-pack-0.6.1.tgz' -OutFile $t;$s=(& tar -xzOf $t 'package/scripts/install-ming.ps1')|Out-String -Width 1000;iex $s"
+   [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmmirror.com/@mingworkbench/capability-pack/-/capability-pack-0.6.2.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
    ```
 
    > 能访问 GitHub 的话，也可以用这条（内容完全一样）：
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -c "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$s=(irm 'https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1')|Out-String -Width 1000;iex $s"
+   [Console]::OutputEncoding=[Text.Encoding]::UTF8;$s=((irm 'https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1') -join [char]10).TrimStart([char]0xFEFF);iex $s
    ```
+
+   > 用的不是 PowerShell 而是命令提示符（cmd）？下载本仓库的 `scripts/install-ming.cmd` 双击即可，效果一样。
 
 3. **完全退出 DSH Desktop，再重新打开**（窗口关闭 + 任务栏右下角图标右键退出）。
 4. 在对话框里**直接说出你想做的事**，例如：

@@ -1,14 +1,14 @@
-<#
+﻿<#
   install-ming.ps1 — 一键安装 Ming（DeepSeek Harness 自然语言能力中间件）
 
   给完全不懂技术的新人：复制一条命令，自动完成安装。
   主命令（npm 官方源，Windows PowerShell 5.1 兼容，无需访问 GitHub）：
-    powershell -NoProfile -ExecutionPolicy Bypass -c "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.1.tgz' -OutFile $t;$s=(& tar -xzOf $t 'package/scripts/install-ming.ps1')|Out-String -Width 1000;iex $s"
+    [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.2.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
 
   国内镜像 npmmirror 同步后，把上面 URL 的 registry.npmjs.org 换成 registry.npmmirror.com 即可。
 
-  GitHub 备选（需能访问 GitHub，脚本无 BOM 可直接 iex）：
-    powershell -NoProfile -ExecutionPolicy Bypass -c "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$s=(irm 'https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1')|Out-String -Width 1000;iex $s"
+  GitHub 备选（需能访问 GitHub）：
+    [Console]::OutputEncoding=[Text.Encoding]::UTF8;$s=((irm 'https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1') -join [char]10).TrimStart([char]0xFEFF);iex $s
 
   脚本自动完成：
     1. 定位 DSH Desktop（注册表 / 常见安装目录 / 正在运行的进程）
