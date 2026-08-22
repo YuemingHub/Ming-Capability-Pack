@@ -15,7 +15,7 @@ import {
   resolveWorkdir,
   searchStorePlugins,
   verifyChecks
-} from "./chunk-VSBFDRXP.js";
+} from "./chunk-4N5NDGIE.js";
 
 // src/tools/ming-auto.ts
 import { defineTool } from "@deepseek-ai/dsh-tools";

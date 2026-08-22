@@ -102,6 +102,115 @@ export const RECIPES: Recipe[] = [
       { kind: 'content_match', pattern: 'index.html', contains: '<html', note: '应为有效 HTML 文档' },
     ],
   },
+  {
+    id: 'infographic',
+    name: '文字变信息图/视觉表达',
+    description: '把一段文字或数据变成一张能看懂的信息图（流程图/时间线/对比图/图标化），纯 SVG/HTML 产出',
+    triggers: ['信息图', '一张图看懂', '视觉表达', '做成图', 'infographic', '流程图', '时间线', '示意图', '海报', 'diagram', 'poster', '关系图', '图标'],
+    guidance: [
+      '用 SVG/HTML/CSS 纯文本产出视觉表达（矢量、浏览器可看可缩放），不要依赖外部生成 API 或图片素材库',
+      '内容要提炼：标题、关键要点、数字一目了然，避免大段文字堆砌',
+      '配色克制（1 个主色 + 1~2 个辅色），字号层级清晰，移动端也要能看',
+      '产出 .svg + 预览 .html；完成后给出文件绝对路径与打开方式',
+    ],
+    capabilities: [
+      { kind: 'tool', id: 'fs_*', purpose: '产出 SVG/HTML 文件', trust: 'official' },
+      {
+        kind: 'skill',
+        id: 'modlens',
+        source: '@liustack/modlens',
+        purpose: '视觉自检（可选，已装社区插件提供）',
+        trust: 'community',
+        optional: true,
+      },
+    ],
+    delegate: { provider: 'spawn' },
+    questions: [
+      {
+        key: 'form',
+        question: '想做成哪种视觉表达？',
+        default: '信息图',
+        options: ['信息图', '流程图', '时间线', '对比图', '图标化'],
+        translate: '用户说「整理成一张图/一张图看懂/总结成图」→ 信息图（标题+要点+数字分区）；' +
+          '「流程/步骤/怎么做」→ 流程图（步骤节点+箭头）；「先后顺序/时间发展」→ 时间线；' +
+          '「比谁强/对比一下」→ 对比图（并排差异）；「做个 logo/标志/小图标」→ 图标化（简洁符号）。',
+      },
+      {
+        key: 'style',
+        question: '视觉风格偏好？',
+        default: '简洁现代',
+        options: ['简洁现代', '商务正式', '活泼卡通', '科技感'],
+        translate: '用户说「好看/可爱/生动/有趣」→ 活泼卡通（明亮色块+圆角）；「正式/开会/汇报用」→ 商务正式（白底+深色标题+品牌色）；' +
+          '「酷/未来/科技」→ 科技感（深色底+霓虹强调）；默认 → 简洁现代（留白+无衬线+克制配色）。',
+      },
+      {
+        key: 'output',
+        question: '做完主要用在哪？',
+        default: '网页上展示 + 可下载的 SVG',
+        options: ['网页上展示 + 可下载的 SVG', '要放进 PPT/文档/邮件', '打印海报'],
+        translate: '用户说「放 PPT/文档/邮件里」→ 矢量 SVG（放大不失真）；「打印/贴出来」→ 竖版海报尺寸（大标题+大字）；' +
+          '「网页/发朋友圈」→ 横版网页尺寸；默认 → 网页展示尺寸。',
+      },
+    ],
+    verification: [
+      { kind: 'file_exists', pattern: '*.svg', note: '应产出 SVG 文件' },
+      { kind: 'content_match', pattern: '*.svg', contains: '<svg', note: '应为有效 SVG' },
+      { kind: 'content_match', pattern: '*.svg', contains: 'viewBox', note: 'SVG 应有画布尺寸' },
+    ],
+  },
+  {
+    id: 'presentation',
+    name: '生成演示文稿（PPT/幻灯片）',
+    description: '把要点整理成一套能翻页演示的幻灯片，打开就能讲',
+    triggers: ['ppt', '幻灯片', '演示文稿', 'slides', 'presentation', '宣讲', 'deck', '做一套讲解'],
+    guidance: [
+      '先提炼要点（结论先行、一页一个主题），再产出幻灯片',
+      '优先产出 HTML 幻灯片（每页一个 section，内联 CSS，浏览器可翻页演示）；若环境有 ppt_create 能力则同时产出 .pptx',
+      '配图用纯 CSS/形状即可，不依赖外部图片；完成后给出文件路径与打开方式',
+    ],
+    capabilities: [
+      { kind: 'tool', id: 'fs_*', purpose: '产出幻灯片文件', trust: 'official' },
+      {
+        kind: 'tool',
+        id: 'ppt_create',
+        source: 'dsh-office-tools',
+        purpose: '生成 .pptx（已装社区插件提供）',
+        trust: 'community',
+        optional: true,
+      },
+    ],
+    delegate: { provider: 'spawn' },
+    questions: [
+      {
+        key: 'audience',
+        question: '这套幻灯片主要给谁讲？',
+        default: '通用/内部汇报',
+        options: ['给上级/老板汇报', '给客户/对外', '给同事/内部培训', '通用'],
+        translate: '用户说「给老板/上级/领导」→ 结论先行 + 数据支撑 + 一页一要点；「给客户/对外」→ 价值卖点 + 案例 + 行动呼吁；' +
+          '「培训/教同事」→ 步骤讲解 + 图示 + 留互动；默认 → 通用结构。',
+      },
+      {
+        key: 'style',
+        question: '视觉风格偏好？',
+        default: '商务简洁',
+        options: ['商务简洁', '科技感', '活泼明亮'],
+        translate: '用户说「正式/专业」→ 商务简洁（白底+深色标题+品牌色）；「产品发布/酷」→ 深色渐变+霓虹强调；' +
+          '「轻松/培训/年轻」→ 明亮色块+大图标。',
+      },
+      {
+        key: 'depth',
+        question: '内容量做多少？',
+        default: '10 页左右核心要点',
+        options: ['精炼 5~8 页', '10 页左右', '详尽 15 页以上'],
+        translate: '用户说「简单/快速/先弄一版」→ 精炼 5~8 页；「详细/完整/要讲很久」→ 详尽 15 页以上（含目录+附录）；' +
+          '默认 → 10 页左右核心要点。',
+      },
+    ],
+    verification: [
+      { kind: 'file_exists', pattern: '*.html', note: '应产出 HTML 幻灯片' },
+      { kind: 'content_match', pattern: '*.html', contains: '<html', note: '应为有效 HTML 文档' },
+    ],
+  },
 ]
 
 /** 按目标文本做规则过滤：返回命中的方案与命中触发词 */

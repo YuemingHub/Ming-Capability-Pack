@@ -203,6 +203,16 @@ test('findRecipesByGoal 命中 HTML 报表方案', () => {
   assert.equal(found[0].recipe.id, 'html-report')
 })
 
+test('findRecipesByGoal 命中信息图方案', () => {
+  const found = findRecipesByGoal('把这段会议纪要变成一张信息图')
+  assert.ok(found.some(f => f.recipe.id === 'infographic'))
+})
+
+test('findRecipesByGoal 命中演示文稿方案', () => {
+  const found = findRecipesByGoal('帮我做一套介绍我们产品的 PPT')
+  assert.ok(found.some(f => f.recipe.id === 'presentation'))
+})
+
 test('findRecipesByGoal 未命中返回空', () => {
   assert.deepEqual(findRecipesByGoal('帮我写一首关于秋天的诗'), [])
 })
@@ -211,6 +221,24 @@ test('getRecipe 按 id 精确获取', () => {
   const r = getRecipe('html-report')
   assert.ok(r)
   assert.ok(r.verification.length >= 2)
+})
+
+test('infographic 方案带翻译提示与 SVG 验收断言', () => {
+  const r = getRecipe('infographic')
+  assert.ok(r)
+  assert.ok(r.questions.every(q => q.translate))
+  assert.ok(r.verification.some(v => v.kind === 'content_match' && v.contains === 'viewBox'))
+  assert.ok(r.capabilities.some(c => c.kind === 'skill' && c.id === 'modlens' && c.optional))
+})
+
+test('presentation 方案可选依赖 ppt_create（缺失不阻断）', () => {
+  const r = getRecipe('presentation')
+  assert.ok(r)
+  assert.ok(r.questions.every(q => q.translate))
+  const ppt = r.capabilities.find(c => c.id === 'ppt_create')
+  assert.ok(ppt)
+  assert.equal(ppt.optional, true)
+  assert.equal(ppt.source, 'dsh-office-tools')
 })
 
 test('recipeCatalog 只暴露目录字段', () => {
