@@ -9,9 +9,17 @@
 
 import type { CapabilityPlan } from './types.js'
 
-/** 把装配计划转成追加到子代理 prompt 的上下文行；answers 为 clarify-first 收集的用户答案 */
+/** 装配计划转成追加到子代理 prompt 的上下文行；answers 为 clarify-first 收集的用户答案 */
 export function assembleContext(plan: CapabilityPlan, answers?: Record<string, string>): string[] {
   const lines: string[] = []
+
+  // 总原则：技术活自己做，不把操作细节推回给用户
+  lines.push(
+    '【执行总原则】用户不是技术人员。定位/读取用户文件、检查环境、找素材这类操作，' +
+      '先用现有工具自己完成（文件搜索、目录浏览、读取常见文档格式）；' +
+      '不要教用户做技术操作（如找文件路径、复制粘贴内容、上传文件、敲命令）。' +
+      '只有当自己确实找不到所需素材时才问用户一次，且只需一句话给出大概位置即可。',
+  )
 
   if (plan.recipeName) {
     lines.push(`【本次装配方案】${plan.recipeName}（命中方式：${plan.matchedBy}）`)

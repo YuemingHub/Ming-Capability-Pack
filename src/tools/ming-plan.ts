@@ -34,6 +34,8 @@ function formatPlan(ep: ExecutionPlan): string {
   }
 
   lines.push('', formatStrategyOptions(ep.strategyOptions))
+  lines.push('', '提醒：用户提到「文档/文件/上传/素材」时，不要教用户上传或找路径——' +
+    '素材的定位与读取由执行环节自己完成；澄清阶段最多问一次用户想要的内容方向。')
   return lines.join('\n')
 }
 
