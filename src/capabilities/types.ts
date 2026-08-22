@@ -1,0 +1,92 @@
+/**
+ * 能力织机（Ming Fabric）核心类型
+ *
+ * 用户目标 → Recipe（方案包）→ CapabilityPlan（装配计划）→ 装配 → 执行 → 验证 → 证据。
+ *
+ * Recipe 是「Ming 提前策展的能力组合」（含社区插件 / skill / MCP / 官方工具），
+ * CapabilityPlan 是 Resolver 针对当前目标输出的可执行计划。
+ * 实现形态（skill / MCP / plugin / tool）不是用户概念，用户只描述「想让什么变成真的」。
+ */
+
+/** 单个能力的实现形态 */
+export type CapabilityKind = 'skill' | 'mcp' | 'tool' | 'plugin' | 'preset'
+
+export interface CapabilityRef {
+  kind: CapabilityKind
+  /** 能力标识：skill / mcp / tool / plugin 的名字；preset 为预设名 */
+  id: string
+  /** 来源（社区插件时给出 npm 包名或 GitHub 仓库，用于安装指引） */
+  source?: string
+  /** 在方案中承担的角色（人话） */
+  purpose: string
+  /** 信任等级：bundled=本包自带；official=DeepSeek 官方；community=社区维护 */
+  trust: 'bundled' | 'official' | 'community'
+  /** 可选能力缺失不阻断闭环 */
+  optional?: boolean
+}
+
+/** 验收断言：把「人想要的」转成可独立检查的事实 */
+export type VerificationCheck =
+  | { kind: 'file_exists'; pattern: string; note?: string }
+  | { kind: 'content_match'; pattern: string; contains: string; note?: string }
+  | { kind: 'dir_nonempty'; pattern: string; note?: string }
+
+/** 方案包（Recipe）：Ming 提前策展的能力组合 */
+export interface Recipe {
+  id: string
+  name: string
+  description: string
+  /** 规则过滤触发词：目标里命中任一即进入候选 */
+  triggers: string[]
+  /** 命中后给执行子代理的额外上下文（人话，说明怎么做 / 用什么） */
+  guidance: string[]
+  capabilities: CapabilityRef[]
+  /** 委派偏好 */
+  delegate?: { provider: 'spawn' | 'fork' }
+  /** 验收断言：执行结束后独立检查 */
+  verification: VerificationCheck[]
+}
+
+/** 能力可用性探测结果 */
+export interface CapabilityAvailability {
+  ref: CapabilityRef
+  available: boolean
+  /** 不可用时的安装指引 */
+  installHint?: string
+}
+
+/** Resolver 输出：装配计划 */
+export interface CapabilityPlan {
+  goal: string
+  /** 命中的方案 id；未命中为 null（退回通用委派） */
+  recipeId: string | null
+  recipeName: string | null
+  /** 命中原因：显式指定 / 规则触发词 / 未命中 */
+  matchedBy: string
+  capabilities: CapabilityAvailability[]
+  /** 给执行子代理的额外上下文 */
+  guidance: string[]
+  delegate?: { provider: 'spawn' | 'fork' }
+  verification: VerificationCheck[]
+  /** 是否可执行：false 时至少一个必选能力缺失 */
+  executable: boolean
+  /** 缺失的必选能力（可执行时为 []） */
+  missingRequired: string[]
+}
+
+/** 单个断言结果 */
+export interface VerificationResult {
+  check: VerificationCheck
+  passed: boolean
+  /** 人类可读的证据细节（匹配到哪些文件 / 为什么失败） */
+  detail: string
+}
+
+export interface VerificationSummary {
+  passed: number
+  failed: number
+  results: VerificationResult[]
+}
+
+/** 通用委派（未命中任何方案时的默认执行方式，与旧版 ming_auto 行为一致） */
+export const DEFAULT_DELEGATE = { provider: 'spawn' as const }

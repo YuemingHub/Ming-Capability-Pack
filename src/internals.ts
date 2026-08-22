@@ -13,6 +13,11 @@ export {
   stopReasonText,
 } from './services/executor.js'
 export { appendMissingNotice, nextStepsFor } from './services/next-steps.js'
+export { assembleContext } from './capabilities/assembler.js'
+export { resolveCapabilities } from './capabilities/resolver.js'
+export { findRecipesByGoal, getRecipe, recipeCatalog, RECIPES } from './capabilities/recipes.js'
+export { matchesSimplePatternForTest, verifyChecks, formatVerification } from './capabilities/verifier.js'
+export { formatStoreResult, searchStorePlugins, type StorePlugin, type StoreSearchOptions, type StoreSearchResult } from './capabilities/store.js'
 export type {
   ArtifactCheck,
   ErrorKind,
@@ -21,3 +26,13 @@ export type {
   HistoryResult,
   MingResult,
 } from './types.js'
+export type {
+  CapabilityAvailability,
+  CapabilityKind,
+  CapabilityPlan,
+  CapabilityRef,
+  Recipe,
+  VerificationCheck,
+  VerificationResult,
+  VerificationSummary,
+} from './capabilities/types.js'

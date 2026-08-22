@@ -60,6 +60,12 @@ export interface MingResult {
   /** 证据卡文件路径 */
   evidence: string
   nextSteps: string[]
+  /** 命中的方案名（未命中任何方案时为空字符串） */
+  recipe: string
+  /** 装配计划摘要（命中了什么能力、有无缺口） */
+  planSummary: string
+  /** 独立验证摘要（文件存在/内容匹配等断言结果） */
+  verificationSummary: string
 }
 
 /** ming_history 单条历史记录 */

@@ -7,7 +7,9 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { registerMingAutoTool } from './tools/ming-auto.js'
+import { registerMingCatalogTool } from './tools/ming-catalog.js'
 import { registerMingHistoryTool } from './tools/ming-history.js'
+import { registerMingStoreTool } from './tools/ming-store.js'
 
 export const name = '@mingworkbench/capability-pack'
 export const version = '0.6.0'
@@ -23,7 +25,9 @@ export async function apply(ctx: Context): Promise<void> {
 
   try {
     registerMingAutoTool(ctx)
+    registerMingCatalogTool(ctx)
     registerMingHistoryTool(ctx)
+    registerMingStoreTool(ctx)
     ctx.systemPrompt.section({
       name: 'tool:ming_auto',
       order: 110,
@@ -33,10 +37,12 @@ export async function apply(ctx: Context): Promise<void> {
         '把用户的目标原样写进 goal 参数（一句话或一段话）；如有相关的文件路径或 URL，填进 resources。',
         'ming_auto 会把目标转交给一个全新的执行子代理，由它真正执行并产出真实文件；完成后按工具返回的产出文件路径向用户汇报。',
         '当用户想回顾之前做过什么、或要找回之前任务的产出时，调用 ming_history 工具查询历史记录。',
+        'Ming 内置若干「方案包」（如整理文件夹、生成 HTML 报表），会自动匹配并装配能力；想查看全部可用方案时可调用 ming_catalog。',
+        '当用户要求的能力本机未装配（如缺少文档解析、Office 处理插件）时，调用 ming_store_search 到 1024Store 社区插件市场搜索替代插件，把返回的安装命令交给用户确认。',
         '注意：如果你自身就是被 ming_auto 委派去执行具体子任务的子代理，不要再次调用本工具（你的工具列表里也不会出现它）。',
       ].join('\n'),
     })
-    ctx.logger.info('✅ ming_auto / ming_history 工具已注册')
+    ctx.logger.info('✅ ming_auto / ming_catalog / ming_history / ming_store_search 工具已注册')
     ctx.logger.info('💡 直接描述你想做的事，Ming 会帮你真正完成')
   } catch (error) {
     ctx.logger.error('❌ Ming Capability Pack 加载失败', error)

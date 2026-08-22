@@ -64,11 +64,17 @@ export function resolveWorkdir(exec: any): string {
 /**
  * 执行用户目标。
  */
+export interface ExecuteOptions {
+  /** 装配上下文：命中方案后注入给执行子代理的额外要求（见 capabilities/assembler） */
+  contextual?: string[]
+}
+
 export async function execute(
   ctx: Context,
   goal: string,
   resources: string[],
   exec: any,
+  options: ExecuteOptions = {},
 ): Promise<ExecutionOutcome> {
   const startedAt = Date.now()
 
@@ -91,7 +97,7 @@ export async function execute(
   const provider = pickProvider(subagents)
 
   if (subagents && provider && exec?.agent) {
-    return executeViaSubagent(subagents, provider, goal, resources, exec, startedAt)
+    return executeViaSubagent(subagents, provider, goal, resources, exec, startedAt, options.contextual)
   }
 
   return {
@@ -112,9 +118,10 @@ async function executeViaSubagent(
   resources: string[],
   exec: any,
   startedAt: number,
+  contextual?: string[],
 ): Promise<ExecutionOutcome> {
   const workdir = resolveWorkdir(exec)
-  const prompt = buildPrompt(goal, resources, workdir)
+  const prompt = buildPrompt(goal, resources, workdir, contextual)
 
   // 可靠性 2：执行超时——组合父级取消信号与本地计时器
   let timedOut = false
@@ -294,7 +301,7 @@ function toAbsolute(rawPath: string, workdir: string): string {
   return isAbsolute(withoutTilde) ? withoutTilde : resolve(workdir, withoutTilde)
 }
 
-function buildPrompt(goal: string, resources: string[], workdir: string): string {
+function buildPrompt(goal: string, resources: string[], workdir: string, contextual?: string[]): string {
   const lines: string[] = [
     '你是 Ming 的执行助手。请完整地完成下面的任务，并产出真实结果（文件、脚本、网页等），不要只给建议。',
     '你可以使用可用的工具（读写文件、执行命令、子代理等）来完成它。',
@@ -302,6 +309,10 @@ function buildPrompt(goal: string, resources: string[], workdir: string): string
     '',
     `【用户目标】\n${goal}`,
   ]
+
+  if (contextual && contextual.length > 0) {
+    lines.push('', ...contextual)
+  }
 
   if (resources.length > 0) {
     lines.push('', '【用户提供的资源】', ...resources.map(r => `- ${r}`))

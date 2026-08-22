@@ -14,6 +14,10 @@ export interface EvidencePayload {
   outcome: ExecutionOutcome
   /** 证据卡落盘目录（会话工作区，而非进程 cwd） */
   workdir: string
+  /** 命中的方案信息（能力织机） */
+  recipe?: { id: string | null; name: string | null; matchedBy: string; capabilities: unknown[] }
+  /** 独立验证结果（能力织机） */
+  verification?: { passed: number; failed: number; results: unknown[] }
 }
 
 export interface EvidenceFile {

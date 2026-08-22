@@ -181,7 +181,28 @@ Harness 原生子代理（理解 + 规划 + 执行，自带 LLM 与工具）
 ```
 
 核心原则：**不重复造轮子**。意图理解、步骤规划、任务执行全部复用 Harness 已具备的
-能力，Ming 只是一个薄薄的适配层，负责「接收自然语言 → 转交原生 Agent → 收集结果」。
+能力，Ming 只是一个薄薄的适配层，负责「接收自然语言 → 匹配方案 → 装配能力 → 转交原生 Agent → 独立验证」。
+
+### 方案包（Recipe）：自动装配
+
+Ming 内置若干「方案包」：每个方案声明「触发场景 + 需要的技能/工具 + 验收断言」。
+用户描述目标后，`ming_auto` 自动完成五步：
+
+1. **匹配方案**：目标命中触发词即选中对应方案（也可用 `ming_catalog` 查看全部方案后，通过 `recipe` 参数显式指定）；
+2. **装配**：把方案的方法论注入执行子代理，并诚实标注尚未装配的能力缺口（不假装已装配）；
+3. **执行**：交给 Harness 原生子代理真正完成（未命中方案时退回通用委派）；
+4. **验证**：执行结束后对方案声明的断言（文件存在 / 内容匹配 / 目录非空）做独立检查，不把「声称产出」当「确认产出」；
+5. **留证**：命中的方案与验证结果一并写入证据卡。
+
+当前内置方案：
+
+| 方案 id | 名称 | 触发词示例 |
+| --- | --- | --- |
+| `tidy-downloads` | 整理下载/工作文件夹 | 整理、归档、分类、下载、清理 |
+| `html-report` | 生成图文 HTML 报表 | 报表、周报、报告、html、网页、图表 |
+
+方案以官方基础能力为主；社区插件（skill / MCP）自动装配是下一步重点，
+方案里已预留 `source`（npm / GitHub）与安装指引。
 
 ## 递归防护
 
@@ -212,6 +233,20 @@ v0.5 起在「薄转发」之外补了三件可靠性小事：
 汇总最近的任务记录（时间 / 目标 / 成败 / 产物数 / 校验情况 / 耗时）。
 
 在对话框里直接说「Ming 最近做过什么」「帮我找一下之前生成的文件」即可触发。
+
+## 社区插件市场（1024Store）
+
+除官方方案外，Ming 内置 **`ming_store_search`** 工具：搜索 DSH 社区插件市场
+（[1024Store](https://api.deepseek1024.com)，DeepSeek Harness 插件的公开目录）——
+当用户要求的能力本机尚未装配（如缺少某个文档解析、Office 处理插件）时，
+用它找到「市场上真实存在、可安装」的插件，返回官方 `dsh plugin add` 安装命令，
+交用户确认后装配；装好后再让 Ming 重跑目标即可复用。本工具只搜索与呈现，不执行安装。
+
+匿名即可使用；GitHub 登录创建 API Key 可获更高配额，可选配置：
+
+```bash
+export MING_STORE_KEY=dsh_live_xxxx   # 可选；不配置则匿名请求
+```
 只读工具，不会执行新任务、也不会产生新证据卡。
 
 ## 项目结构
@@ -219,7 +254,11 @@ v0.5 起在「薄转发」之外补了三件可靠性小事：
 | 文件 / 目录 | 职责 |
 | --- | --- |
 | `src/index.ts` | 插件入口，注册工具 + 注入 systemPrompt |
-| `src/tools/ming-auto.ts` | `ming_auto` 工具定义（goal + resources → 结构化结果） |
+| `src/capabilities/` | 能力织机：Recipe 方案目录、Resolver、Assembler、Verifier |
+| `src/capabilities/store.ts` | 1024Store 客户端（能力目录外部事实源，网络失败优雅降级） |
+| `src/tools/ming-auto.ts` | `ming_auto` 工具定义（目标 → 方案匹配 → 委派 → 独立验证） |
+| `src/tools/ming-catalog.ts` | `ming_catalog` 工具：查看内置方案包 |
+| `src/tools/ming-store.ts` | `ming_store_search` 工具：搜社区插件市场给安装命令 |
 | `src/tools/ming-history.ts` | `ming_history` 工具定义（读取证据卡汇总历史） |
 | `src/services/executor.ts` | 薄转发器：预检 → 带超时委派子代理 → 产物校验 |
 | `src/services/evidence-collector.ts` | 写证据卡 |
