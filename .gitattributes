@@ -1,0 +1,3 @@
+# npm 11 校验 bin shebang，必须保持 LF（CRLF 会导致 bin 被判定 invalid）
+bin/ming text eol=lf
+bin/ming.js text eol=lf
