@@ -14,34 +14,23 @@ Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真�
 不重复造轮子，不给模糊建议，只交付真实产物。
 
 ## 安装
-### 新人：3 分钟开始用（不碰命令行）
+### 新人：复制一条命令，桌面端自己装好
 
-> 你不需要懂任何技术，也不用打开任何「命令行」。按下面 4 步做，就能用自然语言让 AI 帮你做事。
-> 安装全程走国内镜像（npmmirror），不需要访问 GitHub。
+> 你不需要懂任何技术。按下面 4 步做，就能用自然语言让 AI 帮你做事。
+> 这条命令会让 **DSH Desktop 自己完成安装、重启后自动加载、并在对话框里引导你说话**。
+> 全程走国内镜像，不需要访问 GitHub，不需要系统 npm。
 >
-> ⚠️ **别把下面任何命令贴进 DSH Desktop 的对话框**——对话框是「说话」的地方，
-> 不是执行命令的地方。命令只贴到 PowerShell（或直接双击文件），装好后再回对话框说话。
+> ⚠️ **别把命令贴进 DSH Desktop 的对话框**——对话框是「说话」的地方，不是执行命令的地方。
 
 1. **下载安装 DSH Desktop**（[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 桌面版），打开一次完成登录（让对话框能正常回复你）。
-2. **任选一种方式安装 Ming**（二选一，效果一样）：
-   - **方式 A（最省心，推荐）：双击安装文件。** 向给你这份说明的人要 `install-ming.cmd` 这个文件（或从本仓库 `scripts/` 下载），双击它，黑色窗口自动跑完，看到「Ming 已安装完成」即可关掉窗口。
-   - **方式 B（复制一条命令）：** 开始菜单搜索「PowerShell」打开，复制下面**任意一条**粘贴回车（不需要加任何前缀）：
+2. 开始菜单搜索「PowerShell」打开，**复制这一条命令粘贴回车**（不需要加任何前缀）：
 
-     ```powershell
-     [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.2.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
-     ```
+   ```powershell
+   [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.2.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
+   ```
 
-     > 国内镜像同步后，用下面这条更快（内容完全一样）：
-
-     ```powershell
-     [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmmirror.com/@mingworkbench/capability-pack/-/capability-pack-0.6.2.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
-     ```
-
-     > 能访问 GitHub 的话，也可以用这条（内容完全一样）：
-
-     ```powershell
-     [Console]::OutputEncoding=[Text.Encoding]::UTF8;$s=((irm 'https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1') -join [char]10).TrimStart([char]0xFEFF);iex $s
-     ```
+   > 看到「Ming 已安装完成！」就成功了。如果下载慢，把上面 URL 里的 `registry.npmjs.org` 换成 `registry.npmmirror.com` 再跑一次（内容一样）。
+   > 不想复制命令？下载 `install-ming.cmd` 双击，效果一样。
 
 3. **完全退出 DSH Desktop，再重新打开**（窗口关闭 + 任务栏右下角图标右键退出）。
 4. **回到 DSH Desktop 的对话框**，直接说出你想做的事（这里是唯一要说「话」的地方），例如：
