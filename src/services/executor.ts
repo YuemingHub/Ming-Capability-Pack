@@ -5,11 +5,18 @@
  * 用户用自然语言描述目标后，直接交给 Harness 原生的子代理 seam
  * （ctx.subagents）去完成——子代理自带 LLM 与工具，能自己理解、规划、执行。
  *
+ * 在「转交」之外补三件可靠性小事：
+ *   1. 资源预检：resources 里的本地路径先验证存在性，避免浪费一整轮执行；
+ *   2. 执行超时：默认 15 分钟（MING_TIMEOUT_MS 可调），超时中止并如实上报；
+ *   3. 产物校验：对汇报中的本地路径逐一 stat，把「声称产出」变成「确认存在」。
+ *
  * 子代理不可用时，降级为「计划模式」：把目标原样交回当前助手完成。
  */
 
+import { stat } from 'node:fs/promises'
+import { isAbsolute, resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
-import type { ExecutionOutcome } from '../types.js'
+import type { ArtifactCheck, ErrorKind, ExecutionOutcome } from '../types.js'
 
 /** 子代理服务的松散类型（避免强耦合 dsh-subagent 的具体类型名） */
 interface SubagentRuntime {
@@ -26,6 +33,34 @@ interface SubagentRun {
   dispose(): Promise<void>
 }
 
+/** 默认执行超时：15 分钟。可用环境变量 MING_TIMEOUT_MS 覆盖（毫秒）。 */
+const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000
+
+function resolveTimeoutMs(): number {
+  const raw = Number(process.env.MING_TIMEOUT_MS)
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DEFAULT_TIMEOUT_MS
+}
+
+function isUrl(text: string): boolean {
+  return /^https?:\/\//i.test(text)
+}
+
+/** 只有「长得像路径」的资源才做存在性检查；普通描述性文字跳过 */
+function looksLikeLocalPath(text: string): boolean {
+  if (isUrl(text)) return false
+  return (
+    /[\\/]/.test(text) ||
+    /^[A-Za-z]:/.test(text) ||
+    text.startsWith('./') ||
+    text.startsWith('../') ||
+    text.startsWith('~')
+  )
+}
+
+export function resolveWorkdir(exec: any): string {
+  return exec.agent?.session?.header?.cwd ?? process.cwd()
+}
+
 /**
  * 执行用户目标。
  */
@@ -35,11 +70,28 @@ export async function execute(
   resources: string[],
   exec: any,
 ): Promise<ExecutionOutcome> {
+  const startedAt = Date.now()
+
+  // 可靠性 1：资源预检——路径形态的资源不存在就直接失败，省一轮子代理执行
+  const workdir = resolveWorkdir(exec)
+  const missingResources = await findMissingResources(resources, workdir)
+  if (missingResources.length > 0) {
+    return {
+      mode: 'planned',
+      success: false,
+      summary: `提供的资源中有 ${missingResources.length} 个本地路径不存在，已取消委派：${missingResources.join('、')}`,
+      artifacts: [],
+      error: `资源不存在：${missingResources.join(', ')}`,
+      errorKind: 'resource-missing',
+      durationMs: Date.now() - startedAt,
+    }
+  }
+
   const subagents = ctx.get('subagents') as SubagentRuntime | undefined
   const provider = pickProvider(subagents)
 
   if (subagents && provider && exec?.agent) {
-    return executeViaSubagent(subagents, provider, goal, resources, exec)
+    return executeViaSubagent(subagents, provider, goal, resources, exec, startedAt)
   }
 
   return {
@@ -48,6 +100,8 @@ export async function execute(
     summary:
       '当前环境未启用子代理执行引擎，无法委托执行。请直接用你自己的工具完成该目标并产出真实文件。',
     artifacts: [],
+    errorKind: 'engine-unavailable',
+    durationMs: Date.now() - startedAt,
   }
 }
 
@@ -57,17 +111,25 @@ async function executeViaSubagent(
   goal: string,
   resources: string[],
   exec: any,
+  startedAt: number,
 ): Promise<ExecutionOutcome> {
-  const prompt = buildPrompt(goal, resources, resolveWorkdir(exec))
+  const workdir = resolveWorkdir(exec)
+  const prompt = buildPrompt(goal, resources, workdir)
+
+  // 可靠性 2：执行超时——组合父级取消信号与本地计时器
+  let timedOut = false
+  const deadline = withDeadline(exec.signal, () => {
+    timedOut = true
+  })
 
   try {
     const run = await subagents.start(provider, {
       label: `ming: ${truncate(goal, 40)}`,
       prompt: [{ type: 'text', text: prompt }],
       parent: exec.agent,
-      signal: exec.signal,
+      signal: deadline.signal,
       // 显式锁定工作目录：让子代理落盘到当前会话工作区，而非 host 进程 cwd
-      cwd: resolveWorkdir(exec),
+      cwd: workdir,
       // 工具层硬隔离递归：子代理看不到 ming_auto，绝不会再次委派给自己
       toolFilter: { deny: ['ming_auto'] },
     })
@@ -76,6 +138,7 @@ async function executeViaSubagent(
     try {
       result = await run.result
     } finally {
+      deadline.dispose()
       try {
         await run.dispose()
       } catch {
@@ -83,14 +146,32 @@ async function executeViaSubagent(
       }
     }
 
+    const meta = {
+      mode: 'executed' as const,
+      durationMs: Date.now() - startedAt,
+      provider,
+      stopReason: result.stopReason,
+    }
+
     if (result.stopReason !== 'completed') {
+      if (result.stopReason === 'aborted' && timedOut) {
+        return {
+          ...meta,
+          success: false,
+          summary: `执行超时（超过 ${(resolveTimeoutMs() / 60000).toFixed(0)} 分钟），已中止。建议拆小任务，或设置 MING_TIMEOUT_MS 调大超时后重试。`,
+          artifacts: [],
+          error: 'timeout',
+          errorKind: 'timeout',
+        }
+      }
       const reason = stopReasonText(result.stopReason)
       return {
-        mode: 'executed',
+        ...meta,
         success: false,
         summary: `执行未完成：${reason}`,
         artifacts: [],
         error: reason,
+        errorKind: kindFromStopReason(result.stopReason),
       }
     }
 
@@ -99,21 +180,118 @@ async function executeViaSubagent(
       .map(block => block.text ?? '')
       .join('')
 
+    // 可靠性 3：产物校验——「声称产出」逐项对照磁盘
+    const candidateArtifacts = extractArtifacts(text)
+    const artifactChecks = await verifyArtifacts(candidateArtifacts, workdir)
+
     return {
-      mode: 'executed',
+      ...meta,
       success: true,
       summary: text.trim() || '任务已执行完成',
-      artifacts: extractArtifacts(text),
+      artifacts: candidateArtifacts,
+      artifactChecks,
     }
   } catch (error) {
+    if (timedOut) {
+      return {
+        mode: 'executed',
+        success: false,
+        summary: `执行超时（超过 ${(resolveTimeoutMs() / 60000).toFixed(0)} 分钟），已中止。建议拆小任务，或设置 MING_TIMEOUT_MS 调大超时后重试。`,
+        artifacts: [],
+        error: String(error),
+        errorKind: 'timeout',
+        durationMs: Date.now() - startedAt,
+        provider,
+      }
+    }
     return {
       mode: 'executed',
       success: false,
       summary: '执行引擎调用失败',
       artifacts: [],
       error: String(error),
+      errorKind: 'error',
+      durationMs: Date.now() - startedAt,
+      provider,
     }
   }
+}
+
+interface Deadline {
+  signal: AbortSignal
+  dispose(): void
+}
+
+/** 把父级取消信号与本地超时计时器合成一个 AbortSignal */
+function withDeadline(parent: AbortSignal | undefined, onTimeout: () => void): Deadline {
+  const controller = new AbortController()
+  const onParentAbort = () => controller.abort(parent?.reason)
+
+  if (parent) {
+    if (parent.aborted) controller.abort(parent.reason)
+    else parent.addEventListener('abort', onParentAbort, { once: true })
+  }
+
+  const timeoutMs = resolveTimeoutMs()
+  const timer = setTimeout(() => {
+    onTimeout()
+    controller.abort(new Error(`ming_auto 执行超时（${timeoutMs}ms）`))
+  }, timeoutMs)
+
+  return {
+    signal: controller.signal,
+    dispose() {
+      clearTimeout(timer)
+      parent?.removeEventListener('abort', onParentAbort)
+    },
+  }
+}
+
+async function findMissingResources(resources: string[], workdir: string): Promise<string[]> {
+  const missing: string[] = []
+  for (const resource of resources) {
+    if (!looksLikeLocalPath(resource)) continue
+    if (!(await pathExists(resource, workdir))) missing.push(resource)
+  }
+  return missing
+}
+
+async function pathExists(rawPath: string, workdir: string): Promise<boolean> {
+  try {
+    await stat(toAbsolute(rawPath, workdir))
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function verifyArtifacts(
+  candidates: string[],
+  workdir: string,
+): Promise<ArtifactCheck[]> {
+  return Promise.all(candidates.map(candidate => verifyOne(candidate, workdir)))
+}
+
+async function verifyOne(raw: string, workdir: string): Promise<ArtifactCheck> {
+  if (isUrl(raw)) return { raw, kind: 'url' }
+  try {
+    const info = await stat(toAbsolute(raw, workdir))
+    return {
+      raw,
+      kind: 'file',
+      bytes: info.size,
+      modifiedAt: info.mtime.toISOString(),
+    }
+  } catch {
+    return { raw, kind: 'missing' }
+  }
+}
+
+function toAbsolute(rawPath: string, workdir: string): string {
+  const trimmed = rawPath.replace(/[.,;、，。；]+$/u, '')
+  if (isAbsolute(trimmed)) return trimmed
+  const withoutTilde = trimmed.replace(/^~[\\/]/, '')
+  return isAbsolute(withoutTilde) ? withoutTilde : resolve(workdir, withoutTilde)
 }
 
 function buildPrompt(goal: string, resources: string[], workdir: string): string {
@@ -160,8 +338,17 @@ function pickProvider(subagents?: SubagentRuntime): string | undefined {
   return available[0]
 }
 
-export function resolveWorkdir(exec: any): string {
-  return exec.agent?.session?.header?.cwd ?? process.cwd()
+function kindFromStopReason(stopReason: string): ErrorKind {
+  switch (stopReason) {
+    case 'aborted':
+      return 'aborted'
+    case 'max-tokens':
+      return 'max-tokens'
+    case 'refusal':
+      return 'refusal'
+    default:
+      return 'error'
+  }
 }
 
 function stopReasonText(stopReason: string): string {

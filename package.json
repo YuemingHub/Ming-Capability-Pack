@@ -1,6 +1,6 @@
 {
   "name": "@mingworkbench/capability-pack",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Ming 智能助手 - 用自然语言一键调用 Harness 原生能力，真正完成任务并产出文件",
   "type": "module",
   "main": "dist/index.js",

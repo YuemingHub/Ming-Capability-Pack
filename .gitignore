@@ -5,3 +5,4 @@ node_modules/
 ming-evidence/
 .env
 .env.local
+.freebuff/

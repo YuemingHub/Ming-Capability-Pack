@@ -9,7 +9,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { registerMingAutoTool } from './tools/ming-auto.js'
 
 export const name = '@mingworkbench/capability-pack'
-export const version = '0.4.0'
+export const version = '0.5.0'
 
 /**
  * 硬依赖：tools（注册工具）+ systemPrompt（注入「何时用 ming_auto」提示）。

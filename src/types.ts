@@ -1,10 +1,36 @@
 /**
  * 类型定义
  *
- * Ming Capability Pack v0.4：薄适配层。
+ * Ming Capability Pack v0.5：薄适配层。
  * 意图理解、步骤规划、任务执行全部交给 Harness 原生 Agent（子代理 + LLM），
  * Ming 只负责「一键把自然语言转交给原生能力」并收集结果与证据。
  */
+
+/** 单个产物的本地校验结果 */
+export interface ArtifactCheck {
+  /** 从汇报文本中提取的原始字符串 */
+  raw: string
+  /**
+   * file = 本地路径确认存在；
+   * url  = 链接，不做本地校验；
+   * missing = 声称产出但本地未找到（需警惕）
+   */
+  kind: 'file' | 'url' | 'missing'
+  /** 文件大小（字节），仅 file 时存在 */
+  bytes?: number
+  /** 最后修改时间（ISO 8601），仅 file 时存在 */
+  modifiedAt?: string
+}
+
+/** 失败原因分类（驱动针对性 nextSteps 与证据卡归因） */
+export type ErrorKind =
+  | 'engine-unavailable'
+  | 'resource-missing'
+  | 'timeout'
+  | 'aborted'
+  | 'max-tokens'
+  | 'refusal'
+  | 'error'
 
 /** 一次执行的产出 */
 export interface ExecutionOutcome {
@@ -13,9 +39,16 @@ export interface ExecutionOutcome {
   success: boolean
   /** 给用户看的结果摘要 */
   summary: string
-  /** 产出的文件/链接（绝对路径或 URL） */
+  /** 产出的文件/链接（绝对路径或 URL，来自子代理汇报） */
   artifacts: string[]
+  /** 对 artifacts 的逐项本地校验（尽力而为） */
+  artifactChecks?: ArtifactCheck[]
   error?: string
+  errorKind?: ErrorKind
+  /** 执行元信息（随证据卡落盘） */
+  durationMs?: number
+  provider?: string
+  stopReason?: string
 }
 
 /** ming_auto 工具返回给模型的规范值 */

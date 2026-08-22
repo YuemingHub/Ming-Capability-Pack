@@ -28,6 +28,7 @@ export async function writeEvidence(payload: EvidencePayload): Promise<EvidenceF
   const id = `evidence-${Date.now()}`
   const card = {
     id,
+    schemaVersion: 1,
     timestamp: new Date().toISOString(),
     ...payload,
   }
