@@ -156,6 +156,24 @@ type VerificationCheck = {
     pattern: string;
     note?: string;
 };
+/** 执行前需要向用户澄清的关键问题（只问必要的，其余用默认值） */
+interface ClarifyQuestion {
+    /** 答案在装配上下文里的键名 */
+    key: string;
+    question: string;
+    /** 用户不回答时使用的默认值（保证 clarify-first 也能跑） */
+    default: string;
+    /** 给用户的可选答案（供快速选择，用户也可自由输入） */
+    options?: string[];
+}
+/** 执行策略：不同策略走不同的中间件调用链 */
+type StrategyKind = 'mvp-first' | 'clarify-first';
+interface StrategyOption {
+    id: StrategyKind;
+    label: string;
+    description: string;
+    recommended?: boolean;
+}
 /** 方案包（Recipe）：Ming 提前策展的能力组合 */
 interface Recipe {
     id: string;
@@ -172,6 +190,8 @@ interface Recipe {
     };
     /** 验收断言：执行结束后独立检查 */
     verification: VerificationCheck[];
+    /** 执行前可能需要澄清的关键问题（默认值兜底；策略 mvp-first 时跳过） */
+    questions?: ClarifyQuestion[];
 }
 /** 能力可用性探测结果 */
 interface CapabilityAvailability {
@@ -199,6 +219,8 @@ interface CapabilityPlan {
     executable: boolean;
     /** 缺失的必选能力（可执行时为 []） */
     missingRequired: string[];
+    /** 方案声明的澄清问题（供 clarify-first 策略用；未命中方案为空） */
+    questions?: ClarifyQuestion[];
 }
 /** 单个断言结果 */
 interface VerificationResult {
@@ -222,8 +244,8 @@ interface VerificationSummary {
  * 真正「加载 skill / 激活 MCP / 安装插件」的动作留第二刀（走官方 API + dsh plugin 机制）。
  */
 
-/** 把装配计划转成追加到子代理 prompt 的上下文行 */
-declare function assembleContext(plan: CapabilityPlan): string[];
+/** 把装配计划转成追加到子代理 prompt 的上下文行；answers 为 clarify-first 收集的用户答案 */
+declare function assembleContext(plan: CapabilityPlan, answers?: Record<string, string>): string[];
 
 /**
  * Capability Resolver：目标 → 装配计划
@@ -243,6 +265,39 @@ interface ResolveInput {
     recipeId?: string;
 }
 declare function resolveCapabilities(ctx: Context, input: ResolveInput): Promise<CapabilityPlan>;
+
+/**
+ * Execution Planner：目标 → 策略选项 + 澄清问题
+ *
+ * 产品交互：用户只说「想让什么变成真的」，Ming 不连环追问，
+ * 而是先给「怎么做的选择」，让用户挑一个方向再往下走。
+ * 不同策略对应不同的中间件调用链：
+ *   - mvp-first（推荐）：用默认值直接跑出能看的 MVP，看完再迭代（快链）；
+ *   - clarify-first：先问方案声明的关键问题（只问必要的），按用户答案精确装配再跑（核对链）。
+ * 两条链都汇入 ming_auto 执行，区别只在「装配上下文是否注入用户答案」。
+ */
+
+/**
+ * 把方案声明的澄清问题解析成「注入执行子代理的方向」：
+ * mvp-first 直接用默认值；clarify-first 优先用户答案、缺省回落到默认值。
+ * 保证两条链都能跑，且「不问也能做、问了更贴合」。
+ */
+declare function resolveAnswers(plan: Pick<CapabilityPlan, 'questions'>, strategy: string | undefined, answers: Record<string, string> | undefined): Record<string, string> | undefined;
+/** 恒有两个策略：先给选择，不做自由发挥 */
+declare const STRATEGY_OPTIONS: StrategyOption[];
+interface ExecutionPlan {
+    plan: CapabilityPlan;
+    strategyOptions: StrategyOption[];
+    /** 方案声明的澄清问题（clarify-first 时用；未命中方案时为空数组） */
+    questions: ClarifyQuestion[];
+}
+interface PlanInput {
+    goal: string;
+    recipeId?: string;
+}
+declare function planExecution(ctx: Context, input: PlanInput): Promise<ExecutionPlan>;
+/** 把策略选项格式化成给主模型/用户看的文本 */
+declare function formatStrategyOptions(options: StrategyOption[]): string;
 
 /**
  * 内置方案包（Recipe）目录
@@ -326,4 +381,4 @@ declare function searchStorePlugins(query: string, opts?: StoreSearchOptions): P
 /** 把搜索结果格式化成给主模型的紧凑文本（含安装命令） */
 declare function formatStoreResult(result: StoreSearchResult, max?: number): string;
 
-export { type ArtifactCheck, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type MingResult, RECIPES, type Recipe, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type VerificationCheck, type VerificationResult, type VerificationSummary, appendMissingNotice, assembleContext, extractArtifacts, findRecipesByGoal, formatStoreResult, formatVerification, getRecipe, kindFromStopReason, looksLikeLocalPath, matchesSimplePatternForTest, nextStepsFor, recipeCatalog, resolveCapabilities, resolveTimeoutMs, resolveWorkdir, searchStorePlugins, stopReasonText, verifyChecks };
+export { type ArtifactCheck, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type MingResult, RECIPES, type Recipe, STRATEGY_OPTIONS, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, appendMissingNotice, assembleContext, extractArtifacts, findRecipesByGoal, formatStoreResult, formatStrategyOptions, formatVerification, getRecipe, kindFromStopReason, looksLikeLocalPath, matchesSimplePatternForTest, nextStepsFor, planExecution, recipeCatalog, resolveAnswers, resolveCapabilities, resolveTimeoutMs, resolveWorkdir, searchStorePlugins, stopReasonText, verifyChecks };

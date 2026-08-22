@@ -40,11 +40,58 @@ export const RECIPES: Recipe[] = [
     ],
     capabilities: [
       { kind: 'tool', id: 'fs_*', purpose: '读写数据与产出文件', trust: 'official' },
+      {
+        kind: 'tool',
+        id: 'excel_read',
+        source: 'dsh-office-tools',
+        purpose: '读取 Excel 数据（已装社区插件提供）',
+        trust: 'community',
+        optional: true,
+      },
     ],
     delegate: { provider: 'spawn' },
     verification: [
       { kind: 'file_exists', pattern: '*.html', note: '应产出 HTML 文件' },
       { kind: 'content_match', pattern: '*.html', contains: '<html', note: '应为有效 HTML 文档' },
+    ],
+  },
+  {
+    id: 'personal-site',
+    name: '搭建个人网站/主页',
+    description: '从零做一个能打开浏览的个人网站（个人介绍、作品集、博客等），静态优先，打开即用',
+    triggers: ['个人网站', '个人主页', '个人博客', '个人站点', '作品集', 'portfolio', '主页', '落地页', '做网站', '建站'],
+    guidance: [
+      '先按用户确认的主题与视觉风格搭建站点骨架，产出可直接在浏览器打开的文件',
+      '纯静态优先（HTML/CSS/JS），不要引入需要构建或部署才能看的效果；移动端也要能看',
+      '内容先用占位/示例，结构完整、可点击导航；完成后给出首页绝对路径与打开方式',
+    ],
+    capabilities: [
+      { kind: 'tool', id: 'fs_*', purpose: '创建站点文件与目录', trust: 'official' },
+    ],
+    delegate: { provider: 'spawn' },
+    questions: [
+      {
+        key: 'theme',
+        question: '这个网站主要用来做什么？',
+        default: '个人介绍 + 作品展示',
+        options: ['个人介绍 + 作品展示', '个人博客', '作品集 / portfolio', '产品落地页'],
+      },
+      {
+        key: 'style',
+        question: '视觉风格偏好？',
+        default: '简洁现代',
+        options: ['简洁现代', '深色科技', '清新简约', '杂志风'],
+      },
+      {
+        key: 'scope',
+        question: '这次做到什么程度？',
+        default: '先出可看的首页 + 2~3 个内页',
+        options: ['先出可看的首页 + 2~3 个内页', '完整多页面站点', '只要一个落地页'],
+      },
+    ],
+    verification: [
+      { kind: 'file_exists', pattern: 'index.html', note: '应有首页 index.html' },
+      { kind: 'content_match', pattern: 'index.html', contains: '<html', note: '应为有效 HTML 文档' },
     ],
   },
 ]

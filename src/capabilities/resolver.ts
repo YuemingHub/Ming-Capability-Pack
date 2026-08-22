@@ -87,6 +87,7 @@ function planFromRecipe(goal: string, recipe: Recipe, matchedBy: string, capabil
     guidance: recipe.guidance,
     delegate: recipe.delegate ?? DEFAULT_DELEGATE,
     verification: recipe.verification,
+    questions: recipe.questions,
     executable: missingRequired.length === 0,
     missingRequired,
   }

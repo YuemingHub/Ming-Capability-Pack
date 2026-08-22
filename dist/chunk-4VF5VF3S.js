@@ -1,8 +1,15 @@
 // src/capabilities/assembler.ts
-function assembleContext(plan) {
+function assembleContext(plan, answers) {
   const lines = [];
   if (plan.recipeName) {
     lines.push(`\u3010\u672C\u6B21\u88C5\u914D\u65B9\u6848\u3011${plan.recipeName}\uFF08\u547D\u4E2D\u65B9\u5F0F\uFF1A${plan.matchedBy}\uFF09`);
+  }
+  const confirmed = answers && Object.keys(answers).length > 0;
+  if (confirmed) {
+    lines.push("\u3010\u7528\u6237\u5DF2\u786E\u8BA4\u7684\u65B9\u5411\u3011");
+    for (const [key, value] of Object.entries(answers)) {
+      lines.push(`- ${key}\uFF1A${value}`);
+    }
   }
   if (plan.guidance.length > 0) {
     lines.push("\u3010\u65B9\u6848\u6267\u884C\u8981\u6C42\u3011");
@@ -50,12 +57,59 @@ var RECIPES = [
       "\u5B8C\u6210\u540E\u7ED9\u51FA\u6587\u4EF6\u7684\u7EDD\u5BF9\u8DEF\u5F84\u548C\u6253\u5F00\u65B9\u5F0F"
     ],
     capabilities: [
-      { kind: "tool", id: "fs_*", purpose: "\u8BFB\u5199\u6570\u636E\u4E0E\u4EA7\u51FA\u6587\u4EF6", trust: "official" }
+      { kind: "tool", id: "fs_*", purpose: "\u8BFB\u5199\u6570\u636E\u4E0E\u4EA7\u51FA\u6587\u4EF6", trust: "official" },
+      {
+        kind: "tool",
+        id: "excel_read",
+        source: "dsh-office-tools",
+        purpose: "\u8BFB\u53D6 Excel \u6570\u636E\uFF08\u5DF2\u88C5\u793E\u533A\u63D2\u4EF6\u63D0\u4F9B\uFF09",
+        trust: "community",
+        optional: true
+      }
     ],
     delegate: { provider: "spawn" },
     verification: [
       { kind: "file_exists", pattern: "*.html", note: "\u5E94\u4EA7\u51FA HTML \u6587\u4EF6" },
       { kind: "content_match", pattern: "*.html", contains: "<html", note: "\u5E94\u4E3A\u6709\u6548 HTML \u6587\u6863" }
+    ]
+  },
+  {
+    id: "personal-site",
+    name: "\u642D\u5EFA\u4E2A\u4EBA\u7F51\u7AD9/\u4E3B\u9875",
+    description: "\u4ECE\u96F6\u505A\u4E00\u4E2A\u80FD\u6253\u5F00\u6D4F\u89C8\u7684\u4E2A\u4EBA\u7F51\u7AD9\uFF08\u4E2A\u4EBA\u4ECB\u7ECD\u3001\u4F5C\u54C1\u96C6\u3001\u535A\u5BA2\u7B49\uFF09\uFF0C\u9759\u6001\u4F18\u5148\uFF0C\u6253\u5F00\u5373\u7528",
+    triggers: ["\u4E2A\u4EBA\u7F51\u7AD9", "\u4E2A\u4EBA\u4E3B\u9875", "\u4E2A\u4EBA\u535A\u5BA2", "\u4E2A\u4EBA\u7AD9\u70B9", "\u4F5C\u54C1\u96C6", "portfolio", "\u4E3B\u9875", "\u843D\u5730\u9875", "\u505A\u7F51\u7AD9", "\u5EFA\u7AD9"],
+    guidance: [
+      "\u5148\u6309\u7528\u6237\u786E\u8BA4\u7684\u4E3B\u9898\u4E0E\u89C6\u89C9\u98CE\u683C\u642D\u5EFA\u7AD9\u70B9\u9AA8\u67B6\uFF0C\u4EA7\u51FA\u53EF\u76F4\u63A5\u5728\u6D4F\u89C8\u5668\u6253\u5F00\u7684\u6587\u4EF6",
+      "\u7EAF\u9759\u6001\u4F18\u5148\uFF08HTML/CSS/JS\uFF09\uFF0C\u4E0D\u8981\u5F15\u5165\u9700\u8981\u6784\u5EFA\u6216\u90E8\u7F72\u624D\u80FD\u770B\u7684\u6548\u679C\uFF1B\u79FB\u52A8\u7AEF\u4E5F\u8981\u80FD\u770B",
+      "\u5185\u5BB9\u5148\u7528\u5360\u4F4D/\u793A\u4F8B\uFF0C\u7ED3\u6784\u5B8C\u6574\u3001\u53EF\u70B9\u51FB\u5BFC\u822A\uFF1B\u5B8C\u6210\u540E\u7ED9\u51FA\u9996\u9875\u7EDD\u5BF9\u8DEF\u5F84\u4E0E\u6253\u5F00\u65B9\u5F0F"
+    ],
+    capabilities: [
+      { kind: "tool", id: "fs_*", purpose: "\u521B\u5EFA\u7AD9\u70B9\u6587\u4EF6\u4E0E\u76EE\u5F55", trust: "official" }
+    ],
+    delegate: { provider: "spawn" },
+    questions: [
+      {
+        key: "theme",
+        question: "\u8FD9\u4E2A\u7F51\u7AD9\u4E3B\u8981\u7528\u6765\u505A\u4EC0\u4E48\uFF1F",
+        default: "\u4E2A\u4EBA\u4ECB\u7ECD + \u4F5C\u54C1\u5C55\u793A",
+        options: ["\u4E2A\u4EBA\u4ECB\u7ECD + \u4F5C\u54C1\u5C55\u793A", "\u4E2A\u4EBA\u535A\u5BA2", "\u4F5C\u54C1\u96C6 / portfolio", "\u4EA7\u54C1\u843D\u5730\u9875"]
+      },
+      {
+        key: "style",
+        question: "\u89C6\u89C9\u98CE\u683C\u504F\u597D\uFF1F",
+        default: "\u7B80\u6D01\u73B0\u4EE3",
+        options: ["\u7B80\u6D01\u73B0\u4EE3", "\u6DF1\u8272\u79D1\u6280", "\u6E05\u65B0\u7B80\u7EA6", "\u6742\u5FD7\u98CE"]
+      },
+      {
+        key: "scope",
+        question: "\u8FD9\u6B21\u505A\u5230\u4EC0\u4E48\u7A0B\u5EA6\uFF1F",
+        default: "\u5148\u51FA\u53EF\u770B\u7684\u9996\u9875 + 2~3 \u4E2A\u5185\u9875",
+        options: ["\u5148\u51FA\u53EF\u770B\u7684\u9996\u9875 + 2~3 \u4E2A\u5185\u9875", "\u5B8C\u6574\u591A\u9875\u9762\u7AD9\u70B9", "\u53EA\u8981\u4E00\u4E2A\u843D\u5730\u9875"]
+      }
+    ],
+    verification: [
+      { kind: "file_exists", pattern: "index.html", note: "\u5E94\u6709\u9996\u9875 index.html" },
+      { kind: "content_match", pattern: "index.html", contains: "<html", note: "\u5E94\u4E3A\u6709\u6548 HTML \u6587\u6863" }
     ]
   }
 ];
@@ -128,6 +182,7 @@ function planFromRecipe(goal, recipe, matchedBy, capabilities) {
     guidance: recipe.guidance,
     delegate: recipe.delegate ?? DEFAULT_DELEGATE,
     verification: recipe.verification,
+    questions: recipe.questions,
     executable: missingRequired.length === 0,
     missingRequired
   };
@@ -167,6 +222,48 @@ async function resolveCapabilities(ctx, input) {
     capabilities.push(await probeCapability(ctx, ref));
   }
   return planFromRecipe(input.goal, recipe, `rules:${hits.join("\u3001")}`, capabilities);
+}
+
+// src/capabilities/planner.ts
+function resolveAnswers(plan, strategy, answers) {
+  const questions = plan.questions ?? [];
+  if (questions.length === 0) return void 0;
+  const resolved = {};
+  for (const q of questions) {
+    const userValue = answers?.[q.key];
+    resolved[q.key] = strategy === "clarify-first" && userValue?.trim() ? userValue.trim() : q.default;
+  }
+  return resolved;
+}
+var STRATEGY_OPTIONS = [
+  {
+    id: "mvp-first",
+    label: "\u5148\u8DD1\u4E00\u4E2A\u80FD\u770B\u7684 MVP",
+    description: "\u4E0D\u6253\u65AD\u4F60\uFF0C\u76F4\u63A5\u7528\u5408\u7406\u9ED8\u8BA4\u503C\u505A\u51FA\u6765\uFF0C\u4F60\u770B\u5B8C\u518D\u63D0\u4FEE\u6539",
+    recommended: true
+  },
+  {
+    id: "clarify-first",
+    label: "\u5148\u5BF9\u9F50\u9700\u6C42\u518D\u505A",
+    description: "\u5148\u95EE\u4F60\u51E0\u4E2A\u5173\u952E\u95EE\u9898\uFF08\u4E0D\u8D85\u8FC7 3 \u4E2A\uFF09\uFF0C\u505A\u5F97\u66F4\u8D34\u5408\u4F60\u7684\u9700\u8981"
+  }
+];
+async function planExecution(ctx, input) {
+  const plan = await resolveCapabilities(ctx, input);
+  return {
+    plan,
+    strategyOptions: STRATEGY_OPTIONS,
+    questions: plan.questions ?? []
+  };
+}
+function formatStrategyOptions(options) {
+  const lines = ["\u4F60\u60F3\u600E\u4E48\u505A\uFF1F", ""];
+  for (const o of options) {
+    lines.push(`- [${o.id}] ${o.label}${o.recommended ? "\uFF08\u63A8\u8350\uFF09" : ""}`);
+    lines.push(`  ${o.description}`);
+  }
+  lines.push("", "\u628A\u9009\u4E2D\u7684 id\uFF08mvp-first / clarify-first\uFF09\u4F20\u7ED9 ming_auto \u7684 strategy \u53C2\u6570\u5373\u53EF\u3002");
+  return lines.join("\n");
 }
 
 // src/capabilities/verifier.ts
@@ -634,6 +731,10 @@ export {
   getRecipe,
   recipeCatalog,
   resolveCapabilities,
+  resolveAnswers,
+  STRATEGY_OPTIONS,
+  planExecution,
+  formatStrategyOptions,
   verifyChecks,
   formatVerification,
   matchesSimplePatternForTest,

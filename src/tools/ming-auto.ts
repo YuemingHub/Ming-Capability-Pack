@@ -11,6 +11,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { assembleContext } from '../capabilities/assembler.js'
+import { resolveAnswers } from '../capabilities/planner.js'
 import { resolveCapabilities } from '../capabilities/resolver.js'
 import { formatVerification, verifyChecks } from '../capabilities/verifier.js'
 import type { CapabilityPlan } from '../capabilities/types.js'
@@ -55,8 +56,8 @@ export function registerMingAutoTool(ctx: Context): void {
 交给 Harness 原生 Agent 真正完成，产出真实文件并独立验证。
 
 适合：生成网站、处理图片/数据、整理文件、写文档、自动化工作流等任何可描述的任务。
-提示：尽量说清「想要什么结果」，可附带文件路径或 URL；若已通过 ming_catalog 确认方案，
-可在 recipe 参数指定方案 id，否则 Ming 会自动匹配。`,
+提示：先调用 ming_plan 查看策略选择（先跑 MVP / 先对齐需求），再按用户选择把 strategy 传进来；
+也可直接指定 recipe 方案 id。尽量说清「想要什么结果」，可附带文件路径或 URL。`,
 
     parameters: {
       goal: {
@@ -72,6 +73,16 @@ export function registerMingAutoTool(ctx: Context): void {
       recipe: {
         type: 'string',
         description: '可选：通过 ming_catalog 确认的方案 id；不传则自动匹配',
+      },
+      strategy: {
+        type: 'string',
+        enum: ['mvp-first', 'clarify-first'] as const,
+        description: '可选：执行策略。mvp-first 用默认值直接做（默认）；clarify-first 用用户已确认的答案装配后再做',
+      },
+      answers: {
+        type: 'object',
+        additionalProperties: true,
+        description: '可选：clarify-first 时用户确认的答案（键值对，键对应 ming_plan 返回的澄清问题 key）；缺失项用默认值',
       },
     },
 
@@ -94,7 +105,16 @@ export function registerMingAutoTool(ctx: Context): void {
       render: (_args, value) => [{ type: 'text', text: formatResult(value as MingResult) }],
     },
 
-    async execute(args, exec) {
+    async execute(
+      args: {
+        goal: string
+        resources?: string[]
+        recipe?: string
+        strategy?: 'mvp-first' | 'clarify-first'
+        answers?: Record<string, string>
+      },
+      exec,
+    ) {
       const goal = args.goal
       const resources: string[] = args.resources ?? []
       const workdir = resolveWorkdir(exec)
@@ -122,8 +142,9 @@ export function registerMingAutoTool(ctx: Context): void {
         return result
       }
 
-      // ② 装配：把方案要求注入执行上下文
-      const contextual = assembleContext(plan)
+      // ② 装配：把方案要求 + 用户确认的方向注入执行上下文
+      const answers = resolveAnswers(plan, args.strategy, args.answers)
+      const contextual = assembleContext(plan, answers)
 
       // ③ 官方子代理执行（未命中方案时 contextual 为空，行为与旧版一致）
       const outcome = await execute(ctx, goal, resources, exec, { contextual })

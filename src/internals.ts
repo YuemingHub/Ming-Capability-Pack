@@ -15,6 +15,7 @@ export {
 export { appendMissingNotice, nextStepsFor } from './services/next-steps.js'
 export { assembleContext } from './capabilities/assembler.js'
 export { resolveCapabilities } from './capabilities/resolver.js'
+export { planExecution, formatStrategyOptions, resolveAnswers, STRATEGY_OPTIONS } from './capabilities/planner.js'
 export { findRecipesByGoal, getRecipe, recipeCatalog, RECIPES } from './capabilities/recipes.js'
 export { matchesSimplePatternForTest, verifyChecks, formatVerification } from './capabilities/verifier.js'
 export { formatStoreResult, searchStorePlugins, type StorePlugin, type StoreSearchOptions, type StoreSearchResult } from './capabilities/store.js'
@@ -31,7 +32,10 @@ export type {
   CapabilityKind,
   CapabilityPlan,
   CapabilityRef,
+  ClarifyQuestion,
   Recipe,
+  StrategyKind,
+  StrategyOption,
   VerificationCheck,
   VerificationResult,
   VerificationSummary,

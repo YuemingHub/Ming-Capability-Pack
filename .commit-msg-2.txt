@@ -1,0 +1,7 @@
+feat: 策略选择器——先给选择，不同策略走不同中间件调用链
+
+- 新增 ming_plan 工具：目标到「匹配方案 + 两个策略选项（mvp-first 先跑 MVP / clarify-first 先对齐需求）+ 澄清问题（含默认值）」，只规划不执行
+- ming_auto 新增 strategy/answers 参数：mvp-first 用默认值直接装配执行；clarify-first 用用户答案精确装配，缺省回落默认值，绝不卡住等用户
+- 新增 personal-site 方案（搭建个人网站/主页：主题/风格/范围 3 个澄清问题 + 验收断言）
+- html-report 声明可选社区能力 excel_read（dsh-office-tools，已装则探测为可用）
+- 新增 planner 策略纯函数（resolveAnswers 等）+ 8 个单测（共 38），smoke 全绿

@@ -9,12 +9,20 @@
 
 import type { CapabilityPlan } from './types.js'
 
-/** 把装配计划转成追加到子代理 prompt 的上下文行 */
-export function assembleContext(plan: CapabilityPlan): string[] {
+/** 把装配计划转成追加到子代理 prompt 的上下文行；answers 为 clarify-first 收集的用户答案 */
+export function assembleContext(plan: CapabilityPlan, answers?: Record<string, string>): string[] {
   const lines: string[] = []
 
   if (plan.recipeName) {
     lines.push(`【本次装配方案】${plan.recipeName}（命中方式：${plan.matchedBy}）`)
+  }
+
+  const confirmed = answers && Object.keys(answers).length > 0
+  if (confirmed) {
+    lines.push('【用户已确认的方向】')
+    for (const [key, value] of Object.entries(answers)) {
+      lines.push(`- ${key}：${value}`)
+    }
   }
 
   if (plan.guidance.length > 0) {

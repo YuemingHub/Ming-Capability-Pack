@@ -9,6 +9,9 @@ import {
   getRecipe,
   recipeCatalog,
   resolveCapabilities,
+  planExecution,
+  resolveAnswers,
+  STRATEGY_OPTIONS,
   verifyChecks,
   matchesSimplePatternForTest,
 } from '../dist/internals.js'
@@ -21,6 +24,77 @@ function mockCtx() {
     tools: { schemas: () => [] },
   }
 }
+
+// ---------- Planner / 策略选择 ----------
+
+test('planExecution 恒给两个策略选项，推荐 mvp-first', async () => {
+  const ep = await planExecution(mockCtx(), { goal: '我想做个个人网站' })
+  assert.equal(ep.strategyOptions.length, 2)
+  assert.equal(ep.strategyOptions[0].id, 'mvp-first')
+  assert.equal(ep.strategyOptions[0].recommended, true)
+  assert.equal(ep.strategyOptions[1].id, 'clarify-first')
+})
+
+test('planExecution 命中个人网站方案并带澄清问题', async () => {
+  const ep = await planExecution(mockCtx(), { goal: '帮我做个个人网站，展示我的作品' })
+  assert.equal(ep.plan.recipeId, 'personal-site')
+  assert.ok(ep.questions.length >= 3)
+  assert.ok(ep.questions.some(q => q.key === 'theme' && q.default))
+})
+
+test('planExecution 未命中方案时无澄清问题', async () => {
+  const ep = await planExecution(mockCtx(), { goal: '帮我写一首诗' })
+  assert.equal(ep.plan.recipeId, null)
+  assert.equal(ep.questions.length, 0)
+})
+
+test('resolveAnswers mvp-first 全部用默认值', () => {
+  const plan = {
+    questions: [
+      { key: 'theme', question: '主题？', default: '个人介绍' },
+      { key: 'style', question: '风格？', default: '简洁现代' },
+    ],
+  }
+  const resolved = resolveAnswers(plan, 'mvp-first', { theme: '用户自己说的主题' })
+  assert.deepEqual(resolved, { theme: '个人介绍', style: '简洁现代' })
+})
+
+test('resolveAnswers clarify-first 优先用户答案，缺省回落默认', () => {
+  const plan = {
+    questions: [
+      { key: 'theme', question: '主题？', default: '个人介绍' },
+      { key: 'style', question: '风格？', default: '简洁现代' },
+    ],
+  }
+  const resolved = resolveAnswers(plan, 'clarify-first', { theme: '个人博客' })
+  assert.deepEqual(resolved, { theme: '个人博客', style: '简洁现代' })
+})
+
+test('resolveAnswers 无澄清问题时返回 undefined', () => {
+  assert.equal(resolveAnswers({ questions: [] }, 'mvp-first', {}), undefined)
+})
+
+test('assembleContext 注入用户确认的方向', () => {
+  const plan = {
+    goal: 'x',
+    recipeId: 'personal-site',
+    recipeName: '搭建个人网站/主页',
+    matchedBy: 'rules:个人网站',
+    capabilities: [{ ref: { kind: 'tool', id: 'fs_*', purpose: 'x', trust: 'official' }, available: true }],
+    guidance: ['先搭骨架'],
+    delegate: { provider: 'spawn' },
+    verification: [],
+    executable: true,
+    missingRequired: [],
+  }
+  const lines = assembleContext(plan, { theme: '个人博客', style: '深色科技' })
+  assert.ok(lines.some(l => l.includes('用户已确认的方向')))
+  assert.ok(lines.some(l => l.includes('theme：个人博客')))
+})
+
+test('STRATEGY_OPTIONS 导出两个固定策略', () => {
+  assert.equal(STRATEGY_OPTIONS.length, 2)
+})
 
 // ---------- Resolver ----------
 

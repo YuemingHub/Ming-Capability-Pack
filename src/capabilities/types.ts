@@ -31,6 +31,27 @@ export type VerificationCheck =
   | { kind: 'content_match'; pattern: string; contains: string; note?: string }
   | { kind: 'dir_nonempty'; pattern: string; note?: string }
 
+/** 执行前需要向用户澄清的关键问题（只问必要的，其余用默认值） */
+export interface ClarifyQuestion {
+  /** 答案在装配上下文里的键名 */
+  key: string
+  question: string
+  /** 用户不回答时使用的默认值（保证 clarify-first 也能跑） */
+  default: string
+  /** 给用户的可选答案（供快速选择，用户也可自由输入） */
+  options?: string[]
+}
+
+/** 执行策略：不同策略走不同的中间件调用链 */
+export type StrategyKind = 'mvp-first' | 'clarify-first'
+
+export interface StrategyOption {
+  id: StrategyKind
+  label: string
+  description: string
+  recommended?: boolean
+}
+
 /** 方案包（Recipe）：Ming 提前策展的能力组合 */
 export interface Recipe {
   id: string
@@ -45,6 +66,8 @@ export interface Recipe {
   delegate?: { provider: 'spawn' | 'fork' }
   /** 验收断言：执行结束后独立检查 */
   verification: VerificationCheck[]
+  /** 执行前可能需要澄清的关键问题（默认值兜底；策略 mvp-first 时跳过） */
+  questions?: ClarifyQuestion[]
 }
 
 /** 能力可用性探测结果 */
@@ -72,6 +95,8 @@ export interface CapabilityPlan {
   executable: boolean
   /** 缺失的必选能力（可执行时为 []） */
   missingRequired: string[]
+  /** 方案声明的澄清问题（供 clarify-first 策略用；未命中方案为空） */
+  questions?: ClarifyQuestion[]
 }
 
 /** 单个断言结果 */

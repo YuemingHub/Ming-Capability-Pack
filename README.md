@@ -194,12 +194,26 @@ Ming 内置若干「方案包」：每个方案声明「触发场景 + 需要的
 4. **验证**：执行结束后对方案声明的断言（文件存在 / 内容匹配 / 目录非空）做独立检查，不把「声称产出」当「确认产出」；
 5. **留证**：命中的方案与验证结果一并写入证据卡。
 
+### 先给选择，不连环追问
+
+用户只说了目标（如「我想做个个人网站」）时，Ming 不立刻追问细节，
+而是先由 `ming_plan` 给出两条执行策略让用户挑：
+
+| 策略 | 行为 | 中间件调用链 |
+| --- | --- | --- |
+| `mvp-first`（推荐） | 用方案声明的默认值直接做，先出能看的 MVP，看完再迭代 | resolve → assemble(默认值) → execute → verify → evidence |
+| `clarify-first` | 先问方案声明的关键问题（不超过 3 个，含默认值），按答案精确装配再做 | resolve → 收集答案 → assemble(带答案) → execute → verify → evidence |
+
+两条链都汇入 `ming_auto` 执行，区别只在装配上下文是否注入用户答案；
+即使用户不回答澄清问题，`clarify-first` 也会用默认值兜底，绝不卡住等用户。
+
 当前内置方案：
 
 | 方案 id | 名称 | 触发词示例 |
 | --- | --- | --- |
 | `tidy-downloads` | 整理下载/工作文件夹 | 整理、归档、分类、下载、清理 |
 | `html-report` | 生成图文 HTML 报表 | 报表、周报、报告、html、网页、图表 |
+| `personal-site` | 搭建个人网站/主页 | 个人网站、个人主页、作品集、portfolio、做网站、建站 |
 
 方案以官方基础能力为主；社区插件（skill / MCP）自动装配是下一步重点，
 方案里已预留 `source`（npm / GitHub）与安装指引。
@@ -255,8 +269,10 @@ export MING_STORE_KEY=dsh_live_xxxx   # 可选；不配置则匿名请求
 | --- | --- |
 | `src/index.ts` | 插件入口，注册工具 + 注入 systemPrompt |
 | `src/capabilities/` | 能力织机：Recipe 方案目录、Resolver、Assembler、Verifier |
+| `src/capabilities/planner.ts` | 策略选择：先跑 MVP / 先对齐需求 + 澄清问题解析 |
 | `src/capabilities/store.ts` | 1024Store 客户端（能力目录外部事实源，网络失败优雅降级） |
-| `src/tools/ming-auto.ts` | `ming_auto` 工具定义（目标 → 方案匹配 → 委派 → 独立验证） |
+| `src/tools/ming-plan.ts` | `ming_plan` 工具：先给选择（匹配方案 + 策略选项 + 澄清问题） |
+| `src/tools/ming-auto.ts` | `ming_auto` 工具定义（目标 + strategy/answers → 方案匹配 → 委派 → 独立验证） |
 | `src/tools/ming-catalog.ts` | `ming_catalog` 工具：查看内置方案包 |
 | `src/tools/ming-store.ts` | `ming_store_search` 工具：搜社区插件市场给安装命令 |
 | `src/tools/ming-history.ts` | `ming_history` 工具定义（读取证据卡汇总历史） |
