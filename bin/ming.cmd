@@ -36,6 +36,6 @@ SET "PROMPT=请调用 ming_auto 工具完成下面的任务：%*"
 ECHO [ming] profile=%DSH_PROFILE%
 ECHO [ming] prompt=%*
 
-"%SystemRoot%\System32\cmd.exe" /C ""%~dp0ming.js" "%DSH_BIN%" "--profile" "%DSH_PROFILE%" "%PROMPT%"
+node "%~dp0ming.js" "%DSH_BIN%" "--profile" "%DSH_PROFILE%" "%PROMPT%"
 SET "EXITCODE=%ERRORLEVEL%"
 EXIT /B %EXITCODE%

@@ -41,14 +41,14 @@ async function main() {
 
   // 1. typecheck
   try {
-    await run('typecheck', process.execPath, ['run', 'typecheck'])
+    await run('typecheck', 'npm', ['run', 'typecheck'])
   } catch (e) {
     failures.push(e.message)
   }
 
   // 2. build
   try {
-    await run('build', process.execPath, ['run', 'build'])
+    await run('build', 'npm', ['run', 'build'])
   } catch (e) {
     failures.push(e.message)
   }
