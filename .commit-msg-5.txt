@@ -1,0 +1,7 @@
+feat: 新人一键安装——复制一条命令自动装好 Ming 并引导用自然语言
+
+- 新增 scripts/install-ming.ps1：自动定位 DSH Desktop（注册表/常见目录/运行进程）→ 定位 DSH_HOME → 选 profile → 用 DSH 自带 pnpm 安装（绕开系统 npm-cache 权限与 npx 问题）→ 打印「重启后直接说话」引导；支持 -Profile/-Source/-DryRun
+- 新增 scripts/install-ming.cmd：CMD 包装器（双击/命令行皆可）
+- README 顶部新增「新人：复制一条命令，3 分钟开始用」（含 GitHub raw 与 jsDelivr 两条国内可用命令）
+- 修复 smoke.js 注释里的旧 DSH 路径
+- 真机验证：DryRun 探测正确 + minguser 真实安装 19 秒成功无权限问题 + PS 语法校验通过

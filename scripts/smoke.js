@@ -8,7 +8,7 @@
  *
  * 用法：
  *   node scripts/smoke.js
- *   DSH_HOME="C:\Users\Administrator\.dsh" DSH_BIN="E:/claw/DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js" node scripts/smoke.js
+ *   DSH_HOME="C:\Users\User\AppData\Roaming\dsh-desktop\harness" DSH_BIN="E:\tools\DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js" node scripts/smoke.js
  */
 
 import { spawn } from 'node:child_process'

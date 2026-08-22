@@ -14,6 +14,36 @@ Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真�
 不重复造轮子，不给模糊建议，只交付真实产物。
 
 ## 安装
+### 新人：复制一条命令，3 分钟开始用
+
+> 你不需要懂任何技术。按下面 4 步做，就能用自然语言让 AI 帮你做事。
+
+1. **下载安装 DSH Desktop**（[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 桌面版），打开一次完成登录（让对话框能正常回复你）。
+2. **复制下面这一条命令**，粘贴到 PowerShell（开始菜单搜索 PowerShell 打开）并回车：
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1 | iex"
+   ```
+
+   > 国内网络访问 GitHub 慢时，换用下面这条（一样的）：
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://cdn.jsdelivr.net/gh/YuemingHub/Ming-Capability-Pack@main/scripts/install-ming.ps1 | iex"
+   ```
+
+3. **完全退出 DSH Desktop，再重新打开**（窗口关闭 + 任务栏右下角图标右键退出）。
+4. 在对话框里**直接说出你想做的事**，例如：
+
+   - 「我想做个个人网站展示我的作品」
+   - 「帮我整理下载文件夹，太乱了」
+   - 「把这周的数据做成一份周报」
+   - 「把这段文字变成一张信息图」
+
+它会先问你选「先做个能看的版本」还是「先问你几个问题」，选完（或说“你看着办”）就帮你做完，
+并告诉你文件在哪、怎么打开。脚本会自动定位 DSH Desktop、选用它自带的 pnpm 安装（绕开系统 npm 权限问题），
+安装完打印后续引导。想先看它会做什么，可在命令末尾加 `-DryRun`。
+
+## 安装
 
 ### 前置条件
 
