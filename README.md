@@ -108,7 +108,7 @@ bin\ming.cmd "创建一个 hello.html，内容为 <h1>Hello Ming</h1>"
 DSH_PROFILE=web ./bin/ming "整理当前目录文件"
 
 # 指定 dsh bin.js（当自动查找失败时）
-DSH_BIN="E:/claw/DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js" ./bin/ming "帮我做个列表"
+DSH_BIN="E:\tools\DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js" ./bin/ming "帮我做个列表"
 ```
 
 CLI 等价于把这句话喂给 Harness：
@@ -319,13 +319,13 @@ npm run smoke
 桌面版 Harness 的 `dsh` 没有注册成全局命令。直接用 Node 运行 bin.js：
 
 ```bash
-node "E:/claw/DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js" --profile ming "你的任务"
+node "E:\tools\DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js" --profile ming "你的任务"
 ```
 
 或设置 `DSH_BIN` 环境变量后使用 `bin/ming`：
 
 ```bash
-export DSH_BIN="E:/claw/DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js"
+export DSH_BIN="E:\tools\DSH Desktop/resources/app/node_modules/@deepseek-ai/dsh/lib/bin.js"
 ./bin/ming "你的任务"
 ```
 

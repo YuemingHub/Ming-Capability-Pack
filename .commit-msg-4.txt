@@ -1,7 +1,0 @@
-feat: 高频场景落地到 5 个——新增文字转信息图 + 演示文稿
-
-- 新增 infographic 方案：把一段文字/数据变成一张能看懂的信息图（信息图/流程图/时间线/对比图/图标化），纯 SVG/HTML 产出，3 个决策点（形式/风格/用途）+ 翻译提示，验收断言含 viewBox
-- 新增 presentation 方案：把要点整理成可翻页演示的幻灯片，可选依赖 ppt_create（dsh-office-tools，装了产出 .pptx，缺失回退 HTML 幻灯片不阻断），3 个决策点（听众/风格/内容量）+ 翻译提示
-- modlens 确认为 skill 型插件（贡献 skill 而非 tool），infographic 按 skill 声明
-- 触发词与 html-report 错开（避免「可视化/汇报」误命中）
-- 新增 4 个单测（共 48），smoke 全绿；README 更新 5 个高频场景表
