@@ -36,7 +36,7 @@ interface SubagentRun {
 /** 默认执行超时：15 分钟。可用环境变量 MING_TIMEOUT_MS 覆盖（毫秒）。 */
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000
 
-function resolveTimeoutMs(): number {
+export function resolveTimeoutMs(): number {
   const raw = Number(process.env.MING_TIMEOUT_MS)
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DEFAULT_TIMEOUT_MS
 }
@@ -46,7 +46,7 @@ function isUrl(text: string): boolean {
 }
 
 /** 只有「长得像路径」的资源才做存在性检查；普通描述性文字跳过 */
-function looksLikeLocalPath(text: string): boolean {
+export function looksLikeLocalPath(text: string): boolean {
   if (isUrl(text)) return false
   return (
     /[\\/]/.test(text) ||
@@ -288,7 +288,7 @@ async function verifyOne(raw: string, workdir: string): Promise<ArtifactCheck> {
 }
 
 function toAbsolute(rawPath: string, workdir: string): string {
-  const trimmed = rawPath.replace(/[.,;、，。；]+$/u, '')
+  const trimmed = rawPath.replace(/[.,;]+$/u, '')
   if (isAbsolute(trimmed)) return trimmed
   const withoutTilde = trimmed.replace(/^~[\\/]/, '')
   return isAbsolute(withoutTilde) ? withoutTilde : resolve(workdir, withoutTilde)
@@ -313,7 +313,7 @@ function buildPrompt(goal: string, resources: string[], workdir: string): string
 }
 
 /** 从汇报文本里提取产物路径/URL（尽力而为） */
-function extractArtifacts(text: string): string[] {
+export function extractArtifacts(text: string): string[] {
   const found = new Set<string>()
   const patterns = [
     /[A-Za-z]:\\[^\s，。；、`"']+/g,
@@ -338,7 +338,7 @@ function pickProvider(subagents?: SubagentRuntime): string | undefined {
   return available[0]
 }
 
-function kindFromStopReason(stopReason: string): ErrorKind {
+export function kindFromStopReason(stopReason: string): ErrorKind {
   switch (stopReason) {
     case 'aborted':
       return 'aborted'
@@ -351,7 +351,7 @@ function kindFromStopReason(stopReason: string): ErrorKind {
   }
 }
 
-function stopReasonText(stopReason: string): string {
+export function stopReasonText(stopReason: string): string {
   switch (stopReason) {
     case 'aborted':
       return '任务被取消'

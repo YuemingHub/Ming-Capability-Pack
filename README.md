@@ -206,21 +206,32 @@ v0.5 起在「薄转发」之外补了三件可靠性小事：
 
 失败原因按 `errorKind` 分类（`engine-unavailable` / `resource-missing` / `timeout` / `aborted` / `max-tokens` / `refusal` / `error`），并给出针对性的下一步建议。
 
+## 历史查询
+
+除 `ming_auto` 外还内置 **`ming_history`** 工具：读取工作区 `ming-evidence/*.json`，
+汇总最近的任务记录（时间 / 目标 / 成败 / 产物数 / 校验情况 / 耗时）。
+
+在对话框里直接说「Ming 最近做过什么」「帮我找一下之前生成的文件」即可触发。
+只读工具，不会执行新任务、也不会产生新证据卡。
 
 ## 项目结构
 
 | 文件 / 目录 | 职责 |
 | --- | --- |
-| `src/index.ts` | 插件入口，注册 `ming_auto` 工具 + 注入 systemPrompt |
-| `src/tools/ming-auto.ts` | 工具定义（goal + resources → 结构化结果） |
-| `src/services/executor.ts` | 薄转发器：调用原生子代理执行 |
+| `src/index.ts` | 插件入口，注册工具 + 注入 systemPrompt |
+| `src/tools/ming-auto.ts` | `ming_auto` 工具定义（goal + resources → 结构化结果） |
+| `src/tools/ming-history.ts` | `ming_history` 工具定义（读取证据卡汇总历史） |
+| `src/services/executor.ts` | 薄转发器：预检 → 带超时委派子代理 → 产物校验 |
 | `src/services/evidence-collector.ts` | 写证据卡 |
+| `src/services/next-steps.ts` | 失败分类建议 + 校验提醒拼接（纯函数） |
 | `src/types.ts` | 类型定义 |
+| `src/internals.ts` | 内部纯函数导出面（供单元测试复用） |
 | `bin/ming.js` | 跨平台 Node CLI 包装器 |
 | `bin/ming` | Unix shell 包装器 |
 | `bin/ming.cmd` | Windows CMD 包装器 |
 | `cordis.patch.yml` | bundle patch 层（让 `dsh plugin add` 识别并激活本插件） |
 | `scripts/smoke.js` | 冒烟验证脚本 |
+| `test/` | 单元测试（node:test，零依赖） |
 
 ## 开发
 
@@ -230,6 +241,7 @@ cd Ming-Capability-Pack
 npm install
 npm run build
 npm run typecheck
+npm test
 npm run smoke
 ```
 

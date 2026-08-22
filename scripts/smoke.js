@@ -53,7 +53,14 @@ async function main() {
     failures.push(e.message)
   }
 
-  // 3. 可选真机验证
+  // 3. 单元测试
+  try {
+    await run('test', 'npm', ['run', 'test'])
+  } catch (e) {
+    failures.push(e.message)
+  }
+
+  // 4. 可选真机验证
   const dshBin = process.env.DSH_BIN
   const dshHome = process.env.DSH_HOME
   if (dshBin && existsSync(dshBin) && dshHome) {

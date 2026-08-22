@@ -1,6 +1,6 @@
 {
   "name": "@mingworkbench/capability-pack",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Ming 智能助手 - 用自然语言一键调用 Harness 原生能力，真正完成任务并产出文件",
   "type": "module",
   "main": "dist/index.js",
@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./internals": {
+      "types": "./dist/internals.d.ts",
+      "default": "./dist/internals.js"
     },
     "./bin/ming.js": "./bin/ming.js"
   },
@@ -61,9 +65,10 @@
     "tsup": "^8.0.0"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean",
-    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/*.test.mjs\"",
     "smoke": "node scripts/smoke.js",
     "cli": "node bin/ming.js",
     "prepublishOnly": "npm run build"

@@ -61,3 +61,28 @@ export interface MingResult {
   evidence: string
   nextSteps: string[]
 }
+
+/** ming_history 单条历史记录 */
+export interface HistoryEntry {
+  id: string
+  timestamp: string
+  goal: string
+  success: boolean
+  mode: string
+  /** 声称的产物数 */
+  artifactsCount: number
+  /** 校验未通过（本地不存在）的产物数 */
+  missingCount: number
+  /** 失败原因分类；成功时为空字符串；durationMs < 0 表示未知 */
+  errorKind: string
+  durationMs: number
+  evidencePath: string
+}
+
+/** ming_history 工具返回给模型的规范值 */
+export interface HistoryResult {
+  success: boolean
+  total: number
+  returned: number
+  entries: HistoryEntry[]
+}
