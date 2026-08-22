@@ -1,0 +1,7 @@
+feat: npm 发布版——插件走 npm 源 + npmmirror 国内镜像，新人一条命令不碰 GitHub
+
+- scripts/install-ming.ps1：默认源改为 npm 包名 @mingworkbench/capability-pack，安装走 --registry=https://registry.npmmirror.com（国内可达，已验证）；保留 github: 源作为备选
+- README 新人段：主命令改为 npmmirror tgz 直链（irm | tar -xzO | iex），GitHub 命令降为备选
+- package.json：bin 精简为 {"ming": "bin/ming.js"}（npm 11 拒绝 ming.cmd 键，且 shebang 遇 CRLF 判 invalid）
+- bin/ming.js、bin/ming：CRLF → LF（修复 npm 11 对 bin shebang 的校验）
+- 发布 @mingworkbench/capability-pack@0.6.0 到 npmjs（账号 mumian，新建 @mingworkbench 组织）

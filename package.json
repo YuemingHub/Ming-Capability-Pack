@@ -17,8 +17,7 @@
     "./bin/ming.js": "./bin/ming.js"
   },
   "bin": {
-    "ming": "./bin/ming.js",
-    "ming.cmd": "./bin/ming.cmd"
+    "ming": "bin/ming.js"
   },
   "files": [
     "dist",
@@ -44,7 +43,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YuemingHub/Ming-Capability-Pack.git"
+    "url": "git+https://github.com/YuemingHub/Ming-Capability-Pack.git"
   },
   "bugs": {
     "url": "https://github.com/YuemingHub/Ming-Capability-Pack/issues"
@@ -61,8 +60,8 @@
     "@deepseek-ai/cordis": "^4.0.1",
     "@deepseek-ai/dsh-tools": "0.1.0-rc.7",
     "@types/node": "^22.20.0",
-    "typescript": "^6.0.0",
-    "tsup": "^8.0.0"
+    "tsup": "^8.0.0",
+    "typescript": "^6.0.0"
   },
   "scripts": {
     "build": "tsup",

@@ -2,27 +2,31 @@
   install-ming.ps1 — 一键安装 Ming（DeepSeek Harness 自然语言能力中间件）
 
   给完全不懂技术的新人：复制一条命令，自动完成安装。
-  复制到 PowerShell 运行：
 
+  方式 A（npm 源，国内可达，推荐）：脚本已打包在 npm 里，经国内 npmmirror 镜像拉取：
+    powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://registry.npmmirror.com/@mingworkbench/capability-pack/-/capability-pack-0.6.0.tgz | tar -xzO package/scripts/install-ming.ps1 | iex"
+
+  方式 B（GitHub 源，需能访问 GitHub）：
     powershell -NoProfile -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1 | iex"
-
-  （国内网络慢可换：irm https://cdn.jsdelivr.net/gh/YuemingHub/Ming-Capability-Pack@main/scripts/install-ming.ps1 | iex）
+    （GitHub 慢可换：irm https://cdn.jsdelivr.net/gh/YuemingHub/Ming-Capability-Pack@main/scripts/install-ming.ps1 | iex）
 
   脚本自动完成：
     1. 定位 DSH Desktop（注册表 / 常见安装目录 / 正在运行的进程）
     2. 定位 Harness 数据目录（%APPDATA%\dsh-desktop\harness 或 %USERPROFILE%\.dsh）
     3. 选择 profile（web → headless → 第一个已存在的）
-    4. 用 DSH 自带的 pnpm 安装插件（不依赖系统 npm / npx，绕开 npm-cache 权限问题）
+    4. 用 DSH 自带的 pnpm 从 npmmirror（国内镜像）安装插件——不依赖 GitHub、不依赖系统 npm / npx，绕开 npm-cache 权限问题
     5. 打印「重启后直接说自然语言」的引导
 
   可选参数：
     -Profile <name>   指定 profile（默认自动探测）
-    -Source  <spec>   插件源（默认 github:YuemingHub/Ming-Capability-Pack）
+    -Source  <spec>   插件源（默认 @mingworkbench/capability-pack，npm 包名；也支持 github:YuemingHub/Ming-Capability-Pack）
+    -Registry <url>   pnpm registry（默认 https://registry.npmmirror.com，国内镜像）
     -DryRun           只探测，不真正安装
 #>
 param(
   [string]$Profile = '',
-  [string]$Source = 'github:YuemingHub/Ming-Capability-Pack',
+  [string]$Source = '@mingworkbench/capability-pack',
+  [string]$Registry = 'https://registry.npmmirror.com',
   [switch]$DryRun
 )
 $ErrorActionPreference = 'Stop'
@@ -106,13 +110,13 @@ $env:DSH_HOME = $dshHome
 $env:DSH_BIN = $bin
 
 # ---------- 5. 安装 ----------
-Write-Step "安装插件：$Source（profile: $Profile）"
+Write-Step "安装插件：$Source（profile: $Profile，registry: $Registry）"
 if ($DryRun) {
-  Write-Ok "（DryRun）将执行: node `"$bin`" plugin --profile $Profile add $Source"
+  Write-Ok "（DryRun）将执行: node `"$bin`" plugin --profile $Profile add $Source --registry=`"$Registry`""
   exit 0
 }
 
-& node $bin plugin --profile $Profile add $Source
+& node $bin plugin --profile $Profile add $Source "--registry=$Registry"
 if ($LASTEXITCODE -ne 0) {
   Write-Err "安装失败（退出码 $LASTEXITCODE）。请检查网络后重试；仍失败请把上面的完整输出发给维护者。"
 }
