@@ -26,10 +26,10 @@ Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真�
 2. 开始菜单搜索「PowerShell」打开，**复制这一条命令粘贴回车**（不需要加任何前缀）：
 
    ```powershell
-   [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.2.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
+   [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.3.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
    ```
 
-   > 看到「Ming 已安装完成！」就成功了。如果下载慢，把上面 URL 里的 `registry.npmjs.org` 换成 `registry.npmmirror.com` 再跑一次（内容一样）。
+   > 看到「Ming 已安装完成！」就成功了。如果下载慢，把上面 URL 里的 `registry.npmjs.org` 换成 `registry.npmmirror.com` 再跑一次（内容一样，国内镜像已同步）。
    > 不想复制命令？下载 `install-ming.cmd` 双击，效果一样。
 
 3. **完全退出 DSH Desktop，再重新打开**（窗口关闭 + 任务栏右下角图标右键退出）。
