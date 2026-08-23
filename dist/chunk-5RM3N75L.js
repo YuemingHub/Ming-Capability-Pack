@@ -68,6 +68,30 @@ function formatAcceptance(summaries) {
   }
   return lines.join("\n");
 }
+function monthKeyOf(iso) {
+  return iso.slice(0, 7);
+}
+function computeVte(records, month) {
+  const key = month ?? monthKeyOf((/* @__PURE__ */ new Date()).toISOString());
+  return records.filter((r) => monthKeyOf(r.timestamp) === key && r.failed === 0).length;
+}
+function computeVteTrend(records, months = 3) {
+  const now = /* @__PURE__ */ new Date();
+  const out = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    out.push({ month: key, vte: computeVte(records, key) });
+  }
+  return out;
+}
+function formatVte(currentVte, trend) {
+  const line = `\u672C\u6708 VTE\uFF1A${currentVte}`;
+  if (trend.length === 0) return line;
+  const parts = trend.map((t) => `${t.month}\uFF1A${t.vte}`).join("\uFF0C");
+  return `${line}
+\u8FD1 ${trend.length} \u4E2A\u6708\u8D8B\u52BF\uFF1A${parts}`;
+}
 
 // src/services/executor.ts
 import { stat } from "fs/promises";
@@ -2590,6 +2614,10 @@ export {
   readAcceptanceHistory,
   summarizeAcceptance,
   formatAcceptance,
+  monthKeyOf,
+  computeVte,
+  computeVteTrend,
+  formatVte,
   resolveTimeoutMs,
   looksLikeLocalPath,
   resolveWorkdir,

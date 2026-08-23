@@ -5,9 +5,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   appendAcceptanceRecord,
+  computeVte,
+  computeVteTrend,
   failedKindsOf,
   formatAcceptance,
   formatMingResult,
+  formatVte,
+  monthKeyOf,
   readAcceptanceHistory,
   summarizeAcceptance,
 } from '../dist/internals.js'
@@ -181,4 +185,48 @@ test('formatMingResult 无验收历史时不展示健康度区块', () => {
   })
 
   assert.equal(text, '任务完成')
+})
+
+// ---------- 北极星 VTE ----------
+
+test('monthKeyOf 从 ISO 时间戳取月份键', () => {
+  assert.equal(monthKeyOf('2026-08-23T12:00:00.000Z'), '2026-08')
+})
+
+test('computeVte 只统计指定月份且整次验收通过的记录', () => {
+  const records = [
+    { timestamp: '2026-08-01T00:00:00Z', recipeId: 'a', recipeName: 'A', passed: 2, failed: 0, failedKinds: [] },
+    { timestamp: '2026-08-15T00:00:00Z', recipeId: 'a', recipeName: 'A', passed: 1, failed: 1, failedKinds: ['x'] },
+    { timestamp: '2026-07-20T00:00:00Z', recipeId: 'b', recipeName: 'B', passed: 3, failed: 0, failedKinds: [] },
+    { timestamp: '2026-08-30T00:00:00Z', recipeId: 'b', recipeName: 'B', passed: 0, failed: 2, failedKinds: ['x'] },
+  ]
+  assert.equal(computeVte(records, '2026-08'), 1) // 只有第一条整次通过
+  assert.equal(computeVte(records, '2026-07'), 1)
+  assert.equal(computeVte(records, '2026-06'), 0)
+})
+
+test('computeVte 缺省用当前月', () => {
+  const now = new Date().toISOString().slice(0, 7)
+  const records = [{ timestamp: `${now}-15T00:00:00Z`, recipeId: 'a', recipeName: 'A', passed: 1, failed: 0, failedKinds: [] }]
+  assert.equal(computeVte(records), 1)
+})
+
+test('computeVteTrend 返回近 N 个月从旧到新的趋势', () => {
+  const records = [
+    { timestamp: '2026-08-01T00:00:00Z', recipeId: 'a', recipeName: 'A', passed: 2, failed: 0, failedKinds: [] },
+    { timestamp: '2026-07-01T00:00:00Z', recipeId: 'a', recipeName: 'A', passed: 1, failed: 0, failedKinds: [] },
+  ]
+  const trend = computeVteTrend(records, 3)
+  assert.equal(trend.length, 3)
+  // 月份键从旧到新递增
+  for (let i = 1; i < trend.length; i++) {
+    assert.ok(trend[i].month > trend[i - 1].month)
+  }
+  assert.equal(typeof trend[0].vte, 'number')
+})
+
+test('formatVte 展示当月与趋势', () => {
+  const text = formatVte(3, [{ month: '2026-06', vte: 1 }, { month: '2026-07', vte: 2 }, { month: '2026-08', vte: 3 }])
+  assert.match(text, /本月 VTE：3/)
+  assert.match(text, /2026-08：3/)
 })

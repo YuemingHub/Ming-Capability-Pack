@@ -7,13 +7,21 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import { formatAcceptance, readAcceptanceHistory, summarizeAcceptance } from '../services/acceptance-log.js'
+import {
+  computeVte,
+  computeVteTrend,
+  formatAcceptance,
+  formatVte,
+  readAcceptanceHistory,
+  summarizeAcceptance,
+} from '../services/acceptance-log.js'
 import { resolveWorkdir } from '../services/executor.js'
 
 export function registerMingAcceptanceTool(ctx: Context): void {
   ctx.tools.register(defineTool({
     name: 'ming_acceptance',
-    description: 'Ming 验收健康度查询：查看各方案历次验收的通过率（运行次数、通过/失败数、最近运行时间）。' +
+    description: 'Ming 验收健康度查询：查看各方案历次验收的通过率（运行次数、通过/失败数、最近运行时间），' +
+      '以及北极星 VTE（月度「真执行且验证通过」的任务数）与趋势。' +
       '适合：用户想知道「我的方案验收情况如何」「哪个方案质量最稳」。只读工具，不执行任务、不写文件。',
 
     parameters: {},
@@ -33,7 +41,9 @@ export function registerMingAcceptanceTool(ctx: Context): void {
       const workdir = resolveWorkdir(exec)
       const records = await readAcceptanceHistory(workdir)
       const summaries = summarizeAcceptance(records)
-      return { text: formatAcceptance(summaries) }
+      const vte = computeVte(records)
+      const trend = computeVteTrend(records, 3)
+      return { text: [formatAcceptance(summaries), '', formatVte(vte, trend)].join('\n') }
     },
   }))
 }

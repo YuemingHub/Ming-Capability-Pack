@@ -562,6 +562,23 @@ interface AcceptanceSummary {
 declare function summarizeAcceptance(records: AcceptanceRecord[]): AcceptanceSummary[];
 /** 把验收聚合格式化成给人/模型看的文本（纯函数，供查询工具与测试复用） */
 declare function formatAcceptance(summaries: AcceptanceSummary[]): string;
+/** 从 ISO 时间戳取月份键 YYYY-MM（本地时区） */
+declare function monthKeyOf(iso: string): string;
+/**
+ * 计算某月的 VTE：该月内整次任务验收通过（failed === 0）的记录条数。
+ * month 缺省为当前月（YYYY-MM）。
+ */
+declare function computeVte(records: AcceptanceRecord[], month?: string): number;
+/** 近 N 个月的 VTE 趋势（含当前月，从旧到新） */
+declare function computeVteTrend(records: AcceptanceRecord[], months?: number): Array<{
+    month: string;
+    vte: number;
+}>;
+/** 把 VTE 与趋势格式化成人话（纯函数，供查询工具与测试复用） */
+declare function formatVte(currentVte: number, trend: Array<{
+    month: string;
+    vte: number;
+}>): string;
 
 /**
  * Capability Assembler：把装配计划转成「可注入执行子代理的上下文」
@@ -887,4 +904,4 @@ declare function installCapability(source: string): Promise<InstallOutcome>;
 /** 把规范结果渲染成给用户/模型看的中文文本 */
 declare function formatMingResult(value: MingResult): string;
 
-export { ACCEPTANCE_PROTOCOL_VERSION, type AcceptanceRecord, type AcceptanceSummary, type ArtifactCheck, CURATED_CAPABILITIES, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type CuratedCapability, type DispatchAction, type DispatchEntry, type DispatchOptions, type DispatchResult, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MarketplacePlugin, type MingResult, type ParsedInstallCommand, type Pitfall, type ProtocolValidationError, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendAcceptanceRecord, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, dispatchMissingCapabilities, dshBinCandidates, extractArtifacts, failedKindsOf, findRecipesByGoal, formatAcceptance, formatClarify, formatMingResult, formatProtocolErrors, formatStoreResult, formatStrategyOptions, formatVerification, getRecipe, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, nextStepsFor, parseInstallCommand, planExecution, profileDirsOf, rankCandidates, readAcceptanceHistory, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runDshInstall, runWorkflow, searchMarketplacePlugins, searchStorePlugins, stopReasonText, suggestQueryFor, summarizeAcceptance, tokensOf, validateQualityBar, validateRecipeProtocol, validateVerificationChecks, verifyChecks, workflowNextSteps };
+export { ACCEPTANCE_PROTOCOL_VERSION, type AcceptanceRecord, type AcceptanceSummary, type ArtifactCheck, CURATED_CAPABILITIES, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type CuratedCapability, type DispatchAction, type DispatchEntry, type DispatchOptions, type DispatchResult, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MarketplacePlugin, type MingResult, type ParsedInstallCommand, type Pitfall, type ProtocolValidationError, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendAcceptanceRecord, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, computeVte, computeVteTrend, dispatchMissingCapabilities, dshBinCandidates, extractArtifacts, failedKindsOf, findRecipesByGoal, formatAcceptance, formatClarify, formatMingResult, formatProtocolErrors, formatStoreResult, formatStrategyOptions, formatVerification, formatVte, getRecipe, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, monthKeyOf, nextStepsFor, parseInstallCommand, planExecution, profileDirsOf, rankCandidates, readAcceptanceHistory, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runDshInstall, runWorkflow, searchMarketplacePlugins, searchStorePlugins, stopReasonText, suggestQueryFor, summarizeAcceptance, tokensOf, validateQualityBar, validateRecipeProtocol, validateVerificationChecks, verifyChecks, workflowNextSteps };

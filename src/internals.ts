@@ -15,8 +15,12 @@ export {
 export { appendMissingNotice, nextStepsFor, workflowNextSteps } from './services/next-steps.js'
 export {
   appendAcceptanceRecord,
+  computeVte,
+  computeVteTrend,
   failedKindsOf,
   formatAcceptance,
+  formatVte,
+  monthKeyOf,
   readAcceptanceHistory,
   summarizeAcceptance,
   type AcceptanceRecord,

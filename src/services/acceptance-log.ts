@@ -115,3 +115,39 @@ export function formatAcceptance(summaries: AcceptanceSummary[]): string {
   }
   return lines.join('\n')
 }
+
+// ---------- 北极星 VTE（月度「真执行且验证通过」的任务数） ----------
+
+/** 从 ISO 时间戳取月份键 YYYY-MM（本地时区） */
+export function monthKeyOf(iso: string): string {
+  return iso.slice(0, 7)
+}
+
+/**
+ * 计算某月的 VTE：该月内整次任务验收通过（failed === 0）的记录条数。
+ * month 缺省为当前月（YYYY-MM）。
+ */
+export function computeVte(records: AcceptanceRecord[], month?: string): number {
+  const key = month ?? monthKeyOf(new Date().toISOString())
+  return records.filter(r => monthKeyOf(r.timestamp) === key && r.failed === 0).length
+}
+
+/** 近 N 个月的 VTE 趋势（含当前月，从旧到新） */
+export function computeVteTrend(records: AcceptanceRecord[], months = 3): Array<{ month: string; vte: number }> {
+  const now = new Date()
+  const out: Array<{ month: string; vte: number }> = []
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    out.push({ month: key, vte: computeVte(records, key) })
+  }
+  return out
+}
+
+/** 把 VTE 与趋势格式化成人话（纯函数，供查询工具与测试复用） */
+export function formatVte(currentVte: number, trend: Array<{ month: string; vte: number }>): string {
+  const line = `本月 VTE：${currentVte}`
+  if (trend.length === 0) return line
+  const parts = trend.map(t => `${t.month}：${t.vte}`).join('，')
+  return `${line}\n近 ${trend.length} 个月趋势：${parts}`
+}

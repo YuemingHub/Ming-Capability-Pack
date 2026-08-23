@@ -1,10 +1,13 @@
 import {
   buildRecommendationReason,
   clarifyStatus,
+  computeVte,
+  computeVteTrend,
   formatAcceptance,
   formatClarify,
   formatStoreResult,
   formatStrategyOptions,
+  formatVte,
   installCapability,
   matchReason,
   parseInstallCommand,
@@ -18,14 +21,14 @@ import {
   searchStorePlugins,
   summarizeAcceptance,
   writeEvidence
-} from "./chunk-LUTCBZ5U.js";
+} from "./chunk-5RM3N75L.js";
 
 // src/tools/ming-acceptance.ts
 import { defineTool } from "@deepseek-ai/dsh-tools";
 function registerMingAcceptanceTool(ctx) {
   ctx.tools.register(defineTool({
     name: "ming_acceptance",
-    description: "Ming \u9A8C\u6536\u5065\u5EB7\u5EA6\u67E5\u8BE2\uFF1A\u67E5\u770B\u5404\u65B9\u6848\u5386\u6B21\u9A8C\u6536\u7684\u901A\u8FC7\u7387\uFF08\u8FD0\u884C\u6B21\u6570\u3001\u901A\u8FC7/\u5931\u8D25\u6570\u3001\u6700\u8FD1\u8FD0\u884C\u65F6\u95F4\uFF09\u3002\u9002\u5408\uFF1A\u7528\u6237\u60F3\u77E5\u9053\u300C\u6211\u7684\u65B9\u6848\u9A8C\u6536\u60C5\u51B5\u5982\u4F55\u300D\u300C\u54EA\u4E2A\u65B9\u6848\u8D28\u91CF\u6700\u7A33\u300D\u3002\u53EA\u8BFB\u5DE5\u5177\uFF0C\u4E0D\u6267\u884C\u4EFB\u52A1\u3001\u4E0D\u5199\u6587\u4EF6\u3002",
+    description: "Ming \u9A8C\u6536\u5065\u5EB7\u5EA6\u67E5\u8BE2\uFF1A\u67E5\u770B\u5404\u65B9\u6848\u5386\u6B21\u9A8C\u6536\u7684\u901A\u8FC7\u7387\uFF08\u8FD0\u884C\u6B21\u6570\u3001\u901A\u8FC7/\u5931\u8D25\u6570\u3001\u6700\u8FD1\u8FD0\u884C\u65F6\u95F4\uFF09\uFF0C\u4EE5\u53CA\u5317\u6781\u661F VTE\uFF08\u6708\u5EA6\u300C\u771F\u6267\u884C\u4E14\u9A8C\u8BC1\u901A\u8FC7\u300D\u7684\u4EFB\u52A1\u6570\uFF09\u4E0E\u8D8B\u52BF\u3002\u9002\u5408\uFF1A\u7528\u6237\u60F3\u77E5\u9053\u300C\u6211\u7684\u65B9\u6848\u9A8C\u6536\u60C5\u51B5\u5982\u4F55\u300D\u300C\u54EA\u4E2A\u65B9\u6848\u8D28\u91CF\u6700\u7A33\u300D\u3002\u53EA\u8BFB\u5DE5\u5177\uFF0C\u4E0D\u6267\u884C\u4EFB\u52A1\u3001\u4E0D\u5199\u6587\u4EF6\u3002",
     parameters: {},
     output: {
       schema: {
@@ -41,7 +44,9 @@ function registerMingAcceptanceTool(ctx) {
       const workdir = resolveWorkdir(exec);
       const records = await readAcceptanceHistory(workdir);
       const summaries = summarizeAcceptance(records);
-      return { text: formatAcceptance(summaries) };
+      const vte = computeVte(records);
+      const trend = computeVteTrend(records, 3);
+      return { text: [formatAcceptance(summaries), "", formatVte(vte, trend)].join("\n") };
     }
   }));
 }
