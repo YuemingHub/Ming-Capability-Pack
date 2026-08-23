@@ -241,6 +241,31 @@ test('presentation 方案可选依赖 ppt_create（缺失不阻断）', () => {
   assert.equal(ppt.source, 'dsh-office-tools')
 })
 
+test('findRecipesByGoal 命中发布网站方案', () => {
+  const found = findRecipesByGoal('帮我发布网站上线，让别人能打开看')
+  assert.ok(found.some(f => f.recipe.id === 'publish-site'))
+})
+
+test('publish-site 方案声明 3 步工作流，deploy 在发布步且必选', () => {
+  const r = getRecipe('publish-site')
+  assert.ok(r)
+  assert.ok(r.questions.every(q => q.translate))
+  // 发布能力从方案级移到工作流「发布」步（逐步探测，缺了停在本步引导装配）
+  assert.ok(r.workflow && r.workflow.length === 3)
+  assert.deepEqual(r.workflow.map(s => s.id), ['prepare-site', 'check-site', 'publish'])
+  const publishStep = r.workflow.find(s => s.id === 'publish')
+  assert.ok(publishStep)
+  const deploy = publishStep.capabilities.find(c => c.id === 'publish_deploy')
+  assert.ok(deploy)
+  assert.equal(deploy.optional, undefined) // 必选：缺了工作流停在本步，触发装配闭环
+  assert.equal(deploy.trust, 'community')
+  // 每步都有验收断言与坑位（失败时能给用户具体修法）
+  assert.ok(r.workflow.every(s => s.verification?.length > 0))
+  assert.ok(r.workflow.every(s => s.pitfalls?.length > 0))
+  // 方案级只剩基础能力，规则命中即可执行（能力缺口交给工作流步骤级处理）
+  assert.ok(r.capabilities.every(c => c.id !== 'publish_deploy'))
+})
+
 test('recipeCatalog 只暴露目录字段', () => {
   const catalog = recipeCatalog()
   assert.ok(catalog.length >= 2)

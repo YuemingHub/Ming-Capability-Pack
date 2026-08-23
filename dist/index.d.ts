@@ -8,7 +8,7 @@ import { Context } from '@deepseek-ai/cordis';
  */
 
 declare const name = "@mingworkbench/capability-pack";
-declare const version = "0.6.0";
+declare const version = "0.8.0";
 /**
  * 硬依赖：tools（注册工具）+ systemPrompt（注入「何时用 ming_auto」提示）。
  * subagents 作为软依赖在运行期按需取用（见 executor）。

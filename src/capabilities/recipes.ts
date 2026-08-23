@@ -218,6 +218,100 @@ export const RECIPES: Recipe[] = [
       { kind: 'content_match', pattern: '*.html', contains: '<html', note: '应为有效 HTML 文档' },
     ],
   },
+  {
+    id: 'publish-site',
+    name: '发布网站/上线（一条龙：建站 → 校验 → 发布）',
+    description: '从零到公开访问一条龙：没有站点先建一个，校验可打开，再发布上线，生成可公开访问的地址',
+    triggers: ['发布', '上线', '部署', 'deploy', '托管', 'github pages', 'vercel', 'netlify', '让别人能看', '公开访问', '一条龙'],
+    guidance: [
+      '这是一条多步工作流：先确保有站点（没有就建）→ 校验可打开 → 发布上线',
+      '用户提到「先本地看看」时，发布步可以只做本地预览并说明如何本地打开',
+      '发布能力未装配时，停在本步并引导装配，不假装已发布',
+    ],
+    capabilities: [
+      { kind: 'tool', id: 'fs_*', purpose: '准备与检查发布内容', trust: 'official' },
+    ],
+    delegate: { provider: 'spawn' },
+    questions: [
+      {
+        key: 'target',
+        question: '发布到哪里让别人看？',
+        default: '先本地预览，确认没问题再发布',
+        options: ['先本地预览，确认没问题再发布', 'GitHub Pages（免费静态托管）', 'Vercel（免费静态托管）', '生成可发给别人的打包文件'],
+        translate: '用户说「免费/不要钱/白嫖」→ 免费静态托管（GitHub Pages 或 Vercel）；' +
+          '「自己看看/先看效果」→ 本地预览即可，不急着公开；「发给别人/别人能打开」→ 需要公开托管地址。',
+      },
+      {
+        key: 'content',
+        question: '要发布的是哪个文件夹/文件？',
+        default: '当前工作区里刚做好的网站',
+        options: ['当前工作区里刚做好的网站', '我指定一个文件夹'],
+        translate: '用户说「刚做的/刚才那个/这个」→ 当前工作区最近生成的站点；「XX 文件夹」→ 用户指定的路径（自己定位，不要让对方复制粘贴路径）。',
+      },
+    ],
+    verification: [
+      { kind: 'file_exists', pattern: '*.html', note: '发布内容应包含 HTML 页面' },
+      { kind: 'content_match', pattern: '*.html', contains: '<html', note: '应为有效 HTML 文档' },
+    ],
+    workflow: [
+      {
+        id: 'prepare-site',
+        name: '准备站点内容',
+        goal: '确保工作区里有一份可发布的静态网站：若没有，就基于用户目标现做一版（个人网站/落地页/作品集）；若有，确认 index.html 等关键文件齐全。',
+        guidance: [
+          '先检查工作区是否已有网站文件（index.html 等）；有就用现有的，没有就基于用户目标做一版',
+          '用户提到的主题/风格/内容方向（如「作品集」「深色科技风」）按确认的方向做',
+          '必须产出真实 .html 文件并报告绝对路径，不许只给建议',
+        ],
+        verification: [
+          { kind: 'file_exists', pattern: '*.html', note: '应有 HTML 页面' },
+        ],
+        pitfalls: [
+          { symptom: '子代理只给了建议没产出文件', fix: '重试时明确要求：必须产出真实 .html 文件并报告绝对路径' },
+        ],
+      },
+      {
+        id: 'check-site',
+        name: '校验站点可打开',
+        goal: '检查站点：首页存在、是有效 HTML、引用的资源（css/js/图片）路径正确，浏览器能直接打开。',
+        guidance: [
+          '用文件工具检查 index.html 是否存在且内容有效（含 <html> 标签）',
+          '检查引用的相对资源路径都存在；发现坏链就修复',
+        ],
+        verification: [
+          { kind: 'content_match', pattern: '*.html', contains: '<html', note: '首页应为有效 HTML' },
+        ],
+        pitfalls: [
+          { symptom: '首页是空文件或纯模板占位', fix: '确认首页有真实内容（标题/段落/导航），不是空壳模板' },
+        ],
+      },
+      {
+        id: 'publish',
+        name: '发布上线',
+        goal: '把站点发布到公开地址，让别人能通过链接打开；或按用户要求只做本地预览。',
+        guidance: [
+          '优先静态托管（GitHub Pages / Vercel / 本地静态服务），先说明发布后的访问方式再动手',
+          '发布完成后给出可访问的地址（URL 或本地地址）和验证方式',
+        ],
+        capabilities: [
+          {
+            kind: 'tool',
+            id: 'publish_deploy',
+            source: 'dsh-deploy-tools',
+            purpose: '把静态网站发布到公开地址',
+            trust: 'community',
+          },
+        ],
+        verification: [
+          { kind: 'file_exists', pattern: '*.html', note: '发布内容应包含 HTML 页面' },
+        ],
+        pitfalls: [
+          { symptom: '没有发布/部署能力（未装配 publish_deploy）', fix: '按指引走 ming_install 装配闭环：搜索候选给用户选→安装→重启→从发布步继续' },
+          { symptom: '发布后链接打不开', fix: '检查是否真的上传了 index.html；免费托管首次生效可能需等 1~2 分钟' },
+        ],
+      },
+    ],
+  },
 ]
 
 /** 按目标文本做规则过滤：返回命中的方案与命中触发词 */

@@ -26,7 +26,7 @@ Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真�
 2. 开始菜单搜索「PowerShell」打开，**复制这一条命令粘贴回车**（不需要加任何前缀）：
 
    ```powershell
-   [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.6.3.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
+   [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.8.0.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
    ```
 
    > 看到「Ming 已安装完成！」就成功了。如果下载慢，把上面 URL 里的 `registry.npmjs.org` 换成 `registry.npmmirror.com` 再跑一次（内容一样，国内镜像已同步）。
@@ -44,8 +44,6 @@ Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真�
 并告诉你文件在哪、怎么打开。脚本会自动定位 DSH Desktop、选用它自带的 pnpm 从国内镜像安装
 （不需要 GitHub、不需要系统 npm，绕开 npm 权限问题），安装完打印后续引导。
 想先看它会做什么，可在命令末尾加 `-DryRun`。
-
-## 安装
 
 ### 前置条件
 
@@ -226,6 +224,31 @@ Ming 内置若干「方案包」：每个方案声明「触发场景 + 需要的
 4. **验证**：执行结束后对方案声明的断言（文件存在 / 内容匹配 / 目录非空）做独立检查，不把「声称产出」当「确认产出」；
 5. **留证**：命中的方案与验证结果一并写入证据卡。
 
+### 能力装配闭环：缺 → 搜 → 选 → 装 → 验 → 重跑
+
+方案声明的能力（skill / MCP / 工具 / 插件）本机未装配时，Ming 不再只是「贴一句安装指引」，
+而是走一条真正的闭环（`ming_install` 工具）：
+
+1. **搜**：`ming_install`（mode=search）自动把缺口翻译成搜索词，到 1024Store 搜候选；
+2. **选**：返回结构化候选（每个带「为什么与你的目标相关」的匹配理由），**由主模型展示给用户选**——Ming 只提选项，不替用户决定；
+3. **装**：用户选定后 `ming_install`（mode=install）自动定位 dsh、解析并执行 `dsh plugin add`，只跑「dsh plugin add」形态的命令，绝不把市场返回的字符串直接交给 shell；
+4. **验**：装完核对 profile 的 package.json / node_modules，区分「已确认写入」与「需手动」；
+5. **重跑**：给出「重启 DSH → 再说一遍目标」的指引，重启后 Ming 自动复用新能力；装配动作同样写入证据卡。
+
+当前内置方案：
+
+| 方案 id | 名称 | 触发词示例 |
+| --- | --- | --- |
+| `personal-site` | 搭建个人网站/主页 | 个人网站、个人主页、作品集、portfolio、做网站、建站 |
+| `tidy-downloads` | 整理下载/工作文件夹 | 整理、归档、分类、下载、清理 |
+| `html-report` | 生成图文 HTML 报表 | 报表、周报、报告、html、网页、图表 |
+| `infographic` | 文字变信息图/视觉表达 | 信息图、流程图、时间线、海报、做成图 |
+| `presentation` | 生成演示文稿（PPT/幻灯片） | ppt、幻灯片、演示文稿、宣讲、slides |
+| `publish-site` | 发布网站/上线 | 发布、上线、部署、deploy、托管、让别人能看 |
+
+> `publish-site` 是多步工作流（构建 → 预览 → 部署）：任一步中断后说「继续」，
+> Ming 会从断点接着跑（自动跳过已完成步骤），不会重头再来。
+
 ### 先给选择，不连环追问
 
 用户只说了目标（如「我想做个个人网站」）时，Ming 不立刻追问细节，
@@ -243,23 +266,6 @@ Ming 内置若干「方案包」：每个方案声明「触发场景 + 需要的
 用户说「我想展示摄影作品」→ 翻译成「作品集结构（首页 + 分类 + 详情）」；
 用户说「文艺一点」→ 翻译成「浅色背景 + 衬线字体 + 大图留白」。
 澄清过程中用户随时可以说「你看着办」——用默认值兜底，信息够了立刻开始做。
-
-当前内置方案：
-
-| 方案 id | 名称 | 触发词示例 |
-| --- | --- | --- |
-> 高频场景（5 个）：个人网站 / 整理文件 / 生成报表 / 文字变信息图 / 演示文稿。
->
-> | 方案 | 用途 | 触发词示例 |
-> | --- | --- | --- |
-> | `personal-site` | 搭建个人网站/主页 | 个人网站、个人主页、作品集、portfolio、做网站、建站 |
-> | `tidy-downloads` | 整理下载/工作文件夹 | 整理、归档、分类、下载、清理 |
-> | `html-report` | 生成图文 HTML 报表 | 报表、周报、报告、html、网页、图表 |
-> | `infographic` | 文字变信息图/视觉表达 | 信息图、流程图、时间线、海报、做成图 |
-> | `presentation` | 生成演示文稿（PPT/幻灯片） | ppt、幻灯片、演示文稿、宣讲、slides |
-
-方案以官方基础能力为主；社区插件（skill / MCP）自动装配是下一步重点，
-方案里已预留 `source`（npm / GitHub）与安装指引。
 
 ## 递归防护
 
@@ -293,18 +299,20 @@ v0.5 起在「薄转发」之外补了三件可靠性小事：
 
 ## 社区插件市场（1024Store）
 
-除官方方案外，Ming 内置 **`ming_store_search`** 工具：搜索 DSH 社区插件市场
-（[1024Store](https://api.deepseek1024.com)，DeepSeek Harness 插件的公开目录）——
-当用户要求的能力本机尚未装配（如缺少某个文档解析、Office 处理插件）时，
-用它找到「市场上真实存在、可安装」的插件，返回官方 `dsh plugin add` 安装命令，
-交用户确认后装配；装好后再让 Ming 重跑目标即可复用。本工具只搜索与呈现，不执行安装。
+Ming 内置两个市场相关工具，配合完成「缺能力 → 找替代 → 用户选 → 装 → 重跑」：
 
+- **`ming_install`**：能力装配闭环（缺 → 搜 → 选 → 装 → 验 → 重跑）。搜索 1024Store 返回结构化候选（含「为什么配你」的匹配理由），
+  由主模型展示给用户选定后执行安装（自动定位 dsh、解析并执行 `dsh plugin add`），装完核对 profile 写入并给出「重启后重跑」指引。
+- **`ming_store_search`**：只读浏览市场（搜索与呈现，不执行安装），适合单纯「看看有什么」。
+
+1024Store（[api.deepseek1024.com](https://api.deepseek1024.com)）是 DeepSeek Harness 社区插件的公开目录；
 匿名即可使用；GitHub 登录创建 API Key 可获更高配额，可选配置：
 
 ```bash
 export MING_STORE_KEY=dsh_live_xxxx   # 可选；不配置则匿名请求
 ```
-只读工具，不会执行新任务、也不会产生新证据卡。
+
+搜索免费只读；**安装第三方插件有风险，永远等用户明确选定后才执行**，且只跑「dsh plugin add」形态的命令。
 
 ## 项目结构
 
@@ -314,13 +322,17 @@ export MING_STORE_KEY=dsh_live_xxxx   # 可选；不配置则匿名请求
 | `src/capabilities/` | 能力织机：Recipe 方案目录、Resolver、Assembler、Verifier |
 | `src/capabilities/planner.ts` | 策略选择：先跑 MVP / 先对齐需求 + 澄清问题解析 |
 | `src/capabilities/store.ts` | 1024Store 客户端（能力目录外部事实源，网络失败优雅降级） |
+| `src/capabilities/recommend.ts` | 推荐引擎：候选排序 + 「为什么配你」的理由 + 搜索词推导 |
 | `src/tools/ming-plan.ts` | `ming_plan` 工具：先给选择（匹配方案 + 策略选项 + 澄清问题） |
 | `src/tools/ming-clarify.ts` | `ming_clarify` 工具：对话式核对（缺什么问什么，翻译用户的话） |
 | `src/tools/ming-auto.ts` | `ming_auto` 工具定义（目标 + strategy/answers → 方案匹配 → 委派 → 独立验证） |
 | `src/tools/ming-catalog.ts` | `ming_catalog` 工具：查看内置方案包 |
-| `src/tools/ming-store.ts` | `ming_store_search` 工具：搜社区插件市场给安装命令 |
+| `src/tools/ming-store.ts` | `ming_store_search` 工具：只读浏览社区插件市场 |
+| `src/tools/ming-install.ts` | `ming_install` 工具：能力装配闭环（搜候选给用户选 → 安装 → 核对 → 重跑指引） |
 | `src/tools/ming-history.ts` | `ming_history` 工具定义（读取证据卡汇总历史） |
 | `src/services/executor.ts` | 薄转发器：预检 → 带超时委派子代理 → 产物校验 |
+| `src/services/installer.ts` | 安装服务：解析 `dsh plugin add` 命令、定位 dsh/profile、执行安装、核对写入 |
+| `src/services/workflow.ts` | 多步工作流执行器：分步执行 + 续跑（跳过已完成步骤）+ 下一步建议 |
 | `src/services/evidence-collector.ts` | 写证据卡 |
 | `src/services/next-steps.ts` | 失败分类建议 + 校验提醒拼接（纯函数） |
 | `src/types.ts` | 类型定义 |

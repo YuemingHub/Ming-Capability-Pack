@@ -10,11 +10,12 @@ import { registerMingAutoTool } from './tools/ming-auto.js'
 import { registerMingCatalogTool } from './tools/ming-catalog.js'
 import { registerMingClarifyTool } from './tools/ming-clarify.js'
 import { registerMingHistoryTool } from './tools/ming-history.js'
+import { registerMingInstallTool } from './tools/ming-install.js'
 import { registerMingPlanTool } from './tools/ming-plan.js'
 import { registerMingStoreTool } from './tools/ming-store.js'
 
 export const name = '@mingworkbench/capability-pack'
-export const version = '0.6.0'
+export const version = '0.8.0'
 
 /**
  * 硬依赖：tools（注册工具）+ systemPrompt（注入「何时用 ming_auto」提示）。
@@ -30,6 +31,7 @@ export async function apply(ctx: Context): Promise<void> {
     registerMingCatalogTool(ctx)
     registerMingClarifyTool(ctx)
     registerMingHistoryTool(ctx)
+    registerMingInstallTool(ctx)
     registerMingPlanTool(ctx)
     registerMingStoreTool(ctx)
     ctx.systemPrompt.section({
@@ -47,11 +49,17 @@ export async function apply(ctx: Context): Promise<void> {
         'ming_auto 会把目标转交给一个全新的执行子代理，由它真正执行并产出真实文件；完成后按工具返回的产出文件路径向用户汇报。',
         '当用户想回顾之前做过什么、或要找回之前任务的产出时，调用 ming_history 工具查询历史记录。',
         'Ming 内置若干「方案包」（如整理文件夹、生成 HTML 报表、搭建个人网站），会自动匹配并装配能力；想查看全部可用方案时可调用 ming_catalog。',
-        '当用户要求的能力本机未装配（如缺少文档解析、Office 处理插件）时，调用 ming_store_search 到 1024Store 社区插件市场搜索替代插件，把返回的安装命令交给用户确认。',
+        '当方案或用户要求的能力本机未装配（如缺少文档解析、Office 处理、网站部署插件）时，先调用 ming_install（mode=search）到 1024Store 搜索替代插件，' +
+          '把候选展示给用户选择（说明每个为什么与目标相关，不要替用户决定），用户选定后调用 ming_install（mode=install，plugin=选中的候选 name）执行安装；' +
+          '装完按返回的指引提示重启 DSH，重启后用户再说一遍目标，Ming 会自动复用新能力。' +
+          '搜索免费只读，安装必须等用户明确选定后才执行；也可以先用 ming_store_search 做只读浏览。',
+        '部分方案是多步工作流（如「发布网站」= 建站 → 校验 → 发布）。Ming 会逐步执行、逐步独立验收：' +
+          '某一步失败会明确告诉用户是哪一步、常见原因和修法（坑位），不需要用户自己排查；' +
+          '某一步缺能力会停下引导走 ming_install 装配，装完重启后用户说「继续」，就把 workflowFrom=<失败步 id> 传给 ming_auto，从失败步接着做，不重做前面已完成的部分。',
         '注意：如果你自身就是被 ming_auto 委派去执行具体子任务的子代理，不要再次调用本工具（你的工具列表里也不会出现它）。',
       ].join('\n'),
     })
-    ctx.logger.info('✅ ming_plan / ming_clarify / ming_auto / ming_catalog / ming_history / ming_store_search 工具已注册')
+    ctx.logger.info('✅ ming_plan / ming_clarify / ming_auto / ming_catalog / ming_install / ming_store_search / ming_history 工具已注册')
     ctx.logger.info('💡 直接描述你想做的事，Ming 会帮你真正完成')
   } catch (error) {
     ctx.logger.error('❌ Ming Capability Pack 加载失败', error)

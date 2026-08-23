@@ -73,6 +73,15 @@ async function probeCapability(ctx: Context, ref: CapabilityRef): Promise<Capabi
   }
 }
 
+/** 批量探测一组能力（工作流步骤级复用） */
+export async function probeCapabilities(ctx: Context, refs: CapabilityRef[]): Promise<CapabilityAvailability[]> {
+  const out: CapabilityAvailability[] = []
+  for (const ref of refs) {
+    out.push(await probeCapability(ctx, ref))
+  }
+  return out
+}
+
 function planFromRecipe(goal: string, recipe: Recipe, matchedBy: string, capabilities: CapabilityAvailability[]): CapabilityPlan {
   const missingRequired = capabilities
     .filter(c => !c.available && !c.ref.optional)
@@ -88,6 +97,7 @@ function planFromRecipe(goal: string, recipe: Recipe, matchedBy: string, capabil
     delegate: recipe.delegate ?? DEFAULT_DELEGATE,
     verification: recipe.verification,
     questions: recipe.questions,
+    workflow: recipe.workflow,
     executable: missingRequired.length === 0,
     missingRequired,
   }

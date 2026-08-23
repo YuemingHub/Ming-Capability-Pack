@@ -5,6 +5,8 @@
  */
 
 import type { ExecutionOutcome } from '../types.js'
+import { suggestQueryFor } from '../capabilities/recommend.js'
+import type { WorkflowResult } from './workflow.js'
 
 /** 按失败原因给出可操作的下一步，而非千篇一律的套话 */
 export function nextStepsFor(outcome: ExecutionOutcome): string[] {
@@ -30,6 +32,32 @@ export function nextStepsFor(outcome: ExecutionOutcome): string[] {
     default:
       return ['稍后重试', '若持续失败，可携带证据卡内容反馈问题']
   }
+}
+
+/** 把校验发现的「声称产出但本地不存在」如实附在摘要末尾 */
+export function workflowNextSteps(result: WorkflowResult, answers?: Record<string, string>): string[] {
+  const steps = []
+  if (result.failureKind === 'capability-missing') {
+    const blocked = result.stepResults.find(r => r.blockedBy)
+    if (blocked?.blockedBy) {
+      const ref = blocked.blockedBy.ref
+      const q = suggestQueryFor(ref.purpose, ref.id)
+      const answersText = answers && Object.keys(answers).length > 0 ? `，answers=${JSON.stringify(answers)}` : ''
+      steps.push(`调用 ming_install（mode=search，query=「${q}」，purpose=「${ref.purpose ?? ''}」${answersText}）搜索替代插件，候选按你的需求排好序展示给你选`)
+      steps.push(`用户选定后安装，重启 DSH，然后用户说「继续」，把 workflowFrom=${blocked.step.id} 传给 ming_auto 从失败步继续（前面已完成，不重做）`)
+    }
+  } else if (result.failureKind === 'step-failed' || result.failureKind === 'verification-failed') {
+    const pit = result.pitfalls ?? []
+    if (pit.length > 0) {
+      for (const p of pit.slice(0, 3)) {
+        steps.push(`若现象是「${p.symptom}」→ ${p.fix}`)
+      }
+    }
+    steps.push('重跑同一目标再试一次；反复失败时把失败现象告诉我')
+  } else {
+    steps.push('查看上面列出的产出文件', '满意后可继续下一个任务')
+  }
+  return steps
 }
 
 /** 把校验发现的「声称产出但本地不存在」如实附在摘要末尾 */

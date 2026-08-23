@@ -107,17 +107,6 @@ declare function kindFromStopReason(stopReason: string): ErrorKind;
 declare function stopReasonText(stopReason: string): string;
 
 /**
- * 结果收尾：针对性下一步建议 + 校验提醒拼接。
- *
- * 从 ming-auto 抽出的纯函数，便于单元测试与内部导出。
- */
-
-/** 按失败原因给出可操作的下一步，而非千篇一律的套话 */
-declare function nextStepsFor(outcome: ExecutionOutcome): string[];
-/** 把校验发现的「声称产出但本地不存在」如实附在摘要末尾 */
-declare function appendMissingNotice(outcome: ExecutionOutcome): string;
-
-/**
  * 能力织机（Ming Fabric）核心类型
  *
  * 用户目标 → Recipe（方案包）→ CapabilityPlan（装配计划）→ 装配 → 执行 → 验证 → 证据。
@@ -156,6 +145,28 @@ type VerificationCheck = {
     pattern: string;
     note?: string;
 };
+/** 工作流某一步常见的坑：用户「搞半天搞不定」的那些原因 + 修法 */
+interface Pitfall {
+    /** 失败时的常见现象（人话） */
+    symptom: string;
+    /** 对应的解决办法（人话） */
+    fix: string;
+}
+/** 工作流里的一个步骤：独立委派一次子代理执行，做完独立验收 */
+interface WorkflowStep {
+    id: string;
+    name: string;
+    /** 本步要完成的事（给子代理的目标描述，会与用户原始目标合并） */
+    goal: string;
+    /** 本步的执行要求（人话，注入子代理 prompt） */
+    guidance?: string[];
+    /** 本步需要但可能未装配的能力（如发布步需要 publish_deploy） */
+    capabilities?: CapabilityRef[];
+    /** 本步完成后的验收断言（不过则停在本步） */
+    verification?: VerificationCheck[];
+    /** 本步常见坑与修法（失败时给用户的具体提示） */
+    pitfalls?: Pitfall[];
+}
 /** 执行前需要向用户澄清的关键问题（只问必要的，其余用默认值） */
 interface ClarifyQuestion {
     /** 答案在装配上下文里的键名（系统逻辑维度的标识） */
@@ -193,6 +204,8 @@ interface Recipe {
     };
     /** 验收断言：执行结束后独立检查 */
     verification: VerificationCheck[];
+    /** 多步工作流（逐步执行、逐步验收；缺省为单步直接委派） */
+    workflow?: WorkflowStep[];
     /** 执行前可能需要澄清的关键问题（默认值兜底；策略 mvp-first 时跳过） */
     questions?: ClarifyQuestion[];
 }
@@ -222,6 +235,8 @@ interface CapabilityPlan {
     executable: boolean;
     /** 缺失的必选能力（可执行时为 []） */
     missingRequired: string[];
+    /** 多步工作流（方案声明时存在；单步方案为 undefined） */
+    workflow?: WorkflowStep[];
     /** 方案声明的澄清问题（供 clarify-first 策略用；未命中方案为空） */
     questions?: ClarifyQuestion[];
 }
@@ -239,6 +254,63 @@ interface VerificationSummary {
 }
 
 /**
+ * 工作流执行器（痛点 1：复杂工作流容易掉坑，「搞半天搞不定」）
+ *
+ * 方案声明多步工作流时，Ming 逐步执行、逐步独立验收：
+ *   1. 每步先探测本步所需能力（缺了就不白跑，直接引导装配）；
+ *   2. 委派一次子代理完成本步（复用薄转发器的预检/超时/产物校验）；
+ *   3. 本步验收断言不过就停在本步，失败原因附上方案预写的「坑位与修法」——
+ *      用户不需要自己排查「为什么搞不定」，Ming 直接告诉他哪一步、常见原因、怎么办；
+ *   4. 支持 workflowFrom：装完能力重启后从失败步继续，不重做前面已完成步骤。
+ */
+
+interface WorkflowStepResult {
+    step: WorkflowStep;
+    /** 本步执行产出；skipped 或 blockedBy 时为 undefined */
+    outcome?: ExecutionOutcome;
+    /** 本步验收结果（本步声明了验收断言时存在） */
+    verification?: VerificationSummary;
+    /** 因 workflowFrom 跳过（前面已完成，不重做） */
+    skipped: boolean;
+    /** 本步因缺能力未执行 */
+    blockedBy?: CapabilityAvailability;
+}
+type WorkflowFailureKind = 'step-failed' | 'verification-failed' | 'capability-missing';
+interface WorkflowResult {
+    success: boolean;
+    stepResults: WorkflowStepResult[];
+    /** 失败步 id（成功时为空） */
+    failedStepId?: string;
+    failureKind?: WorkflowFailureKind;
+    /** 失败步的坑位（用户「搞半天搞不定」的那些原因的修法） */
+    pitfalls?: Pitfall[];
+    summary: string;
+    durationMs: number;
+}
+interface RunWorkflowOptions {
+    /** 从某一步继续（跳过之前的步骤；用于装配能力重启后恢复） */
+    workflowFrom?: string;
+    /** 装配上下文（方案要求 + 用户确认的方向），注入每个步骤的子代理 prompt */
+    baseContext?: string[];
+}
+declare function runWorkflow(ctx: Context, exec: any, goal: string, resources: string[], steps: WorkflowStep[], workdir: string, options?: RunWorkflowOptions): Promise<WorkflowResult>;
+/** 汇总所有执行步的产出路径（供证据卡与汇报） */
+declare function collectWorkflowArtifacts(result: WorkflowResult): string[];
+
+/**
+ * 结果收尾：针对性下一步建议 + 校验提醒拼接。
+ *
+ * 从 ming-auto 抽出的纯函数，便于单元测试与内部导出。
+ */
+
+/** 按失败原因给出可操作的下一步，而非千篇一律的套话 */
+declare function nextStepsFor(outcome: ExecutionOutcome): string[];
+/** 把校验发现的「声称产出但本地不存在」如实附在摘要末尾 */
+declare function workflowNextSteps(result: WorkflowResult, answers?: Record<string, string>): string[];
+/** 把校验发现的「声称产出但本地不存在」如实附在摘要末尾 */
+declare function appendMissingNotice(outcome: ExecutionOutcome): string;
+
+/**
  * Capability Assembler：把装配计划转成「可注入执行子代理的上下文」
  *
  * 第一刀只做两件事：
@@ -247,7 +319,7 @@ interface VerificationSummary {
  * 真正「加载 skill / 激活 MCP / 安装插件」的动作留第二刀（走官方 API + dsh plugin 机制）。
  */
 
-/** 把装配计划转成追加到子代理 prompt 的上下文行；answers 为 clarify-first 收集的用户答案 */
+/** 装配计划转成追加到子代理 prompt 的上下文行；answers 为 clarify-first 收集的用户答案 */
 declare function assembleContext(plan: CapabilityPlan, answers?: Record<string, string>): string[];
 
 /**
@@ -346,6 +418,64 @@ declare function getRecipe(id: string): Recipe | undefined;
 declare function recipeCatalog(): Array<Pick<Recipe, 'id' | 'name' | 'description' | 'triggers'>>;
 
 /**
+ * 能力推荐引擎（痛点 2：用户不知道需要什么，「眼花缭乱」）
+ *
+ * 不做「把一堆插件甩给用户」，而是按「用户的目标 + 已确认的方向」把候选排序，
+ * 只推最相关的前几个，并给出「为什么配你」的人话理由。
+ *
+ * 排序信号（纯规则，零 LLM 消耗）：
+ *   1. 需求关键词命中（query 分词，权重 2）——用户/主模型提炼的搜索词；
+ *   2. 用户已确认方向命中（scenario 短语子串，权重 3）——clarify 收集的答案，
+ *      如「作品集结构」「GitHub Pages」是最个性化的信号；
+ *   3. 社区热度（stars / installCount 的对数信号，0.5/0.25）——只做弱加成，
+ *      避免高星垃圾插件压过「真正配你」的。
+ */
+interface RecommendContext {
+    /** 搜索关键词（主模型/用户提炼，如「网站 部署」「excel 报表」） */
+    query: string;
+    /** 缺口能力承担的角色（人话），如「把静态网站发布到公开地址」 */
+    purpose?: string;
+    /** 用户已确认的方向短语，如 ['作品集结构', 'GitHub Pages 免费静态托管'] */
+    scenario?: string[];
+}
+interface ScoredCandidate<T> {
+    candidate: T;
+    score: number;
+    /** 命中的查询词（用于理由） */
+    queryHits: string[];
+    /** 命中的场景短语（用于理由） */
+    scenarioHits: string[];
+}
+/** 取文本里值得匹配的短词：按非字母数字切分，滤掉过短/纯数字 */
+declare function tokensOf(text: string): string[];
+/**
+ * 给候选打分排序。textOf 返回候选的「可匹配文本」（如 name + 描述 + 分类）。
+ */
+declare function rankCandidates<T>(candidates: T[], ctx: RecommendContext, textOf: (c: T) => string, signalOf: (c: T) => {
+    stars?: number;
+    installCount?: number;
+}): Array<ScoredCandidate<T>>;
+/**
+ * 生成「为什么配你」的人话理由：先讲与用户需求/方向的匹配，再补热度信号。
+ */
+declare function buildRecommendationReason(candidateText: string, ctx: RecommendContext, signals: {
+    stars?: number;
+    installCount?: number;
+}, hits?: {
+    queryHits?: string[];
+    scenarioHits?: string[];
+}): string;
+/**
+ * 从缺失能力推导市场搜索词（实测校准：1024Store 对「单个英文单词 / 单个中文词」
+ * 命中率高，对长句子与多词短语基本返回 0）：
+ *   1. 优先 purpose 里的英文关键词（excel / pdf / markdown / github 这类最易命中）；
+ *   2. 其次能力 id 的下划线 token 里最具体的一个（publish_deploy → publish）；
+ *   3. 再退到中文：剥句首虚词后取前 2~4 字；
+ *   4. 兜底能力 id。
+ */
+declare function suggestQueryFor(purpose: string | undefined, id: string): string;
+
+/**
  * Capability Verifier：验收断言 → 独立回读现实
  *
  * 把方案声明的验收断言（文件存在 / 内容匹配 / 目录非空）转成可独立检查的事实，
@@ -408,4 +538,93 @@ declare function searchStorePlugins(query: string, opts?: StoreSearchOptions): P
 /** 把搜索结果格式化成给主模型的紧凑文本（含安装命令） */
 declare function formatStoreResult(result: StoreSearchResult, max?: number): string;
 
-export { type ArtifactCheck, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type MingResult, RECIPES, type Recipe, STRATEGY_OPTIONS, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, appendMissingNotice, assembleContext, clarifyStatus, extractArtifacts, findRecipesByGoal, formatClarify, formatStoreResult, formatStrategyOptions, formatVerification, getRecipe, kindFromStopReason, looksLikeLocalPath, matchesSimplePatternForTest, nextStepsFor, planExecution, recipeCatalog, resolveAnswers, resolveCapabilities, resolveTimeoutMs, resolveWorkdir, searchStorePlugins, stopReasonText, verifyChecks };
+/**
+ * 能力安装服务（闭环装配的「装 + 验」）
+ *
+ * 负责把用户在 1024Store 选中的插件真正装进 DSH profile，并核对安装结果。
+ * 定位 dsh 命令时优先复用宿主进程自身安装位置（profiles/node_modules），
+ * 找不到时回退 PATH 里的 `dsh`；再不行就如实报「请手动执行」，绝不假装装上了。
+ *
+ * 安全红线：
+ *   - 只执行「dsh plugin ... add <source>」形态的命令（parseInstallCommand 校验）；
+ *   - 绝不把 1024Store 返回的原始命令字符串直接交给 shell——解析后用自己的参数重建；
+ *   - 安装永远由用户选定后才触发（ming_install 的 install 模式）。
+ */
+
+/** 解析后的安装命令：源 + 可选 profile */
+interface ParsedInstallCommand {
+    /** 要安装的插件源（如 dsh-excel-tools / github:owner/repo） */
+    source: string;
+    /** 命令里声明的 profile（我们安装时以当前 profile 为准，此处仅记录） */
+    profile?: string;
+}
+/**
+ * 解析 1024Store 返回的安装命令（形如 `dsh plugin --profile web add dsh-excel-tools`）。
+ * 只接受「dsh 开头 + plugin 子命令 + add」的形态，其余一律拒绝，避免把任意文本变成命令。
+ */
+declare function parseInstallCommand(install: string): ParsedInstallCommand;
+/**
+ * 构建安装子进程参数。
+ * dshBin 为 null 表示直接用 PATH 里的 `dsh` 可执行文件。
+ */
+declare function buildInstallArgs(source: string, profile: string, dshBin: string | null): string[];
+/**
+ * 组装可 spawn 的参数与展示命令。
+ * dshBin 是 bin.js 脚本时，Windows 上必须用 `node <bin.js>` 启动（直接 spawn 脚本会 EFTYPE），
+ * 所以返回的 args 不含 bin.js，由调用方用 node 作为解释器执行。
+ */
+declare function buildInstallCommand(source: string, profile: string, dshBin: string | null): {
+    args: string[];
+    command: string;
+};
+/** 候选 dsh bin.js 路径（fromDir = 本模块所在目录，构建后为 dist/services） */
+declare function dshBinCandidates(fromDir: string): string[];
+/** DSH 数据目录：DSH_HOME 环境变量优先，默认 ~/.dsh */
+declare function resolveDshHome(): string;
+/** 候选 profile 目录名（第一刀只扫官方布局 profiles/） */
+declare function profileDirsOf(home: string): string[];
+/**
+ * 推荐理由（纯规则）：候选与搜索词的相关性说明 + 星标，供主模型转述给用户。
+ * 让用户看到的不是「有一堆插件」，而是「为什么这个配我」。
+ */
+declare function matchReason(plugin: Pick<StorePlugin, 'name' | 'description' | 'category'> & {
+    stars?: number;
+}, query: string): string;
+/** 解析当前 profile 名：DSH_PROFILE → 扫 profiles 找含本插件的 profile → 默认 ming */
+declare function resolveProfileName(): Promise<string>;
+/** 安装结果核对：profile package.json 或 profiles/node_modules 里是否已有该插件 */
+interface InstallCheckResult {
+    confirmed: boolean;
+    detail: string;
+}
+declare function checkInstalled(source: string): Promise<InstallCheckResult>;
+/** 一次安装子进程的执行记录 */
+interface InstallExecution {
+    ok: boolean;
+    exitCode: number | null;
+    output: string;
+    /** 实际使用的 dsh（null = PATH 里的 dsh） */
+    bin: string | null;
+    profile: string;
+    /** 展示给用户的完整命令 */
+    command: string;
+}
+/** 执行 `dsh plugin add <source>`（带超时，捕获输出，不抛异常） */
+declare function runDshInstall(source: string, opts?: {
+    timeoutMs?: number;
+}): Promise<InstallExecution>;
+/** 装配编排：安装 → 核对 → 下一步建议 */
+interface InstallOutcome {
+    ok: boolean;
+    installed: boolean;
+    /** 是否在 profile 层面确认写入（重启前可验证的事实） */
+    confirmed: boolean;
+    detail: string;
+    output: string;
+    command: string;
+    profile: string;
+    nextSteps: string[];
+}
+declare function installCapability(source: string): Promise<InstallOutcome>;
+
+export { type ArtifactCheck, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MingResult, type ParsedInstallCommand, type Pitfall, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, dshBinCandidates, extractArtifacts, findRecipesByGoal, formatClarify, formatStoreResult, formatStrategyOptions, formatVerification, getRecipe, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, nextStepsFor, parseInstallCommand, planExecution, profileDirsOf, rankCandidates, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runDshInstall, runWorkflow, searchStorePlugins, stopReasonText, suggestQueryFor, tokensOf, verifyChecks, workflowNextSteps };

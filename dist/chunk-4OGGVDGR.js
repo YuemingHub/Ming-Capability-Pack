@@ -1,6 +1,9 @@
 // src/capabilities/assembler.ts
 function assembleContext(plan, answers) {
   const lines = [];
+  lines.push(
+    "\u3010\u6267\u884C\u603B\u539F\u5219\u3011\u7528\u6237\u4E0D\u662F\u6280\u672F\u4EBA\u5458\u3002\u5B9A\u4F4D/\u8BFB\u53D6\u7528\u6237\u6587\u4EF6\u3001\u68C0\u67E5\u73AF\u5883\u3001\u627E\u7D20\u6750\u8FD9\u7C7B\u64CD\u4F5C\uFF0C\u5148\u7528\u73B0\u6709\u5DE5\u5177\u81EA\u5DF1\u5B8C\u6210\uFF08\u6587\u4EF6\u641C\u7D22\u3001\u76EE\u5F55\u6D4F\u89C8\u3001\u8BFB\u53D6\u5E38\u89C1\u6587\u6863\u683C\u5F0F\uFF09\uFF1B\u4E0D\u8981\u6559\u7528\u6237\u505A\u6280\u672F\u64CD\u4F5C\uFF08\u5982\u627E\u6587\u4EF6\u8DEF\u5F84\u3001\u590D\u5236\u7C98\u8D34\u5185\u5BB9\u3001\u4E0A\u4F20\u6587\u4EF6\u3001\u6572\u547D\u4EE4\uFF09\u3002\u53EA\u6709\u5F53\u81EA\u5DF1\u786E\u5B9E\u627E\u4E0D\u5230\u6240\u9700\u7D20\u6750\u65F6\u624D\u95EE\u7528\u6237\u4E00\u6B21\uFF0C\u4E14\u53EA\u9700\u4E00\u53E5\u8BDD\u7ED9\u51FA\u5927\u6982\u4F4D\u7F6E\u5373\u53EF\u3002"
+  );
   if (plan.recipeName) {
     lines.push(`\u3010\u672C\u6B21\u88C5\u914D\u65B9\u6848\u3011${plan.recipeName}\uFF08\u547D\u4E2D\u65B9\u5F0F\uFF1A${plan.matchedBy}\uFF09`);
   }
@@ -54,6 +57,7 @@ var RECIPES = [
     guidance: [
       "\u4EA7\u51FA\u5355\u6587\u4EF6 HTML\uFF08\u5185\u8054 CSS\uFF0C\u907F\u514D\u5916\u90E8\u4F9D\u8D56\uFF09\uFF0C\u53CC\u51FB\u5373\u53EF\u5728\u6D4F\u89C8\u5668\u6253\u5F00",
       "\u6570\u636E\u5728\u672C\u5730\u6587\u4EF6\u91CC\u5C31\u5148\u8BFB\u53D6\u518D\u6574\u7406\u6210\u8868\u683C\uFF1B\u56FE\u8868\u7528\u7EAF HTML/CSS \u6216\u8F7B\u91CF\u5185\u8054\u65B9\u5F0F\u5B9E\u73B0",
+      "\u7D20\u6750\u83B7\u53D6\uFF1A\u7528\u6237\u63D0\u5230\u300C\u6587\u6863/\u6570\u636E/\u6587\u4EF6/\u4E0A\u4F20\u300D\u65F6\uFF0C\u5148\u7528\u6587\u4EF6\u5DE5\u5177\u81EA\u5DF1\u5B9A\u4F4D\u5E76\u8BFB\u53D6\u6570\u636E\u6587\u4EF6\uFF08.xlsx/.csv/.md/.txt \u7B49\uFF09\uFF0C\u4E0D\u8981\u6559\u7528\u6237\u627E\u8DEF\u5F84\u6216\u590D\u5236\u7C98\u8D34\uFF1B\u8BFB\u4E0D\u4E86\u5C31\u5982\u5B9E\u8BF4\u660E\u7F3A\u4EC0\u4E48\u89E3\u6790\u80FD\u529B\uFF0C\u786E\u5B9E\u627E\u4E0D\u5230\u65F6\u6700\u591A\u95EE\u4E00\u6B21\u7528\u6237\u5927\u6982\u4F4D\u7F6E",
       "\u5B8C\u6210\u540E\u7ED9\u51FA\u6587\u4EF6\u7684\u7EDD\u5BF9\u8DEF\u5F84\u548C\u6253\u5F00\u65B9\u5F0F"
     ],
     capabilities: [
@@ -124,7 +128,8 @@ var RECIPES = [
       "\u7528 SVG/HTML/CSS \u7EAF\u6587\u672C\u4EA7\u51FA\u89C6\u89C9\u8868\u8FBE\uFF08\u77E2\u91CF\u3001\u6D4F\u89C8\u5668\u53EF\u770B\u53EF\u7F29\u653E\uFF09\uFF0C\u4E0D\u8981\u4F9D\u8D56\u5916\u90E8\u751F\u6210 API \u6216\u56FE\u7247\u7D20\u6750\u5E93",
       "\u5185\u5BB9\u8981\u63D0\u70BC\uFF1A\u6807\u9898\u3001\u5173\u952E\u8981\u70B9\u3001\u6570\u5B57\u4E00\u76EE\u4E86\u7136\uFF0C\u907F\u514D\u5927\u6BB5\u6587\u5B57\u5806\u780C",
       "\u914D\u8272\u514B\u5236\uFF081 \u4E2A\u4E3B\u8272 + 1~2 \u4E2A\u8F85\u8272\uFF09\uFF0C\u5B57\u53F7\u5C42\u7EA7\u6E05\u6670\uFF0C\u79FB\u52A8\u7AEF\u4E5F\u8981\u80FD\u770B",
-      "\u4EA7\u51FA .svg + \u9884\u89C8 .html\uFF1B\u5B8C\u6210\u540E\u7ED9\u51FA\u6587\u4EF6\u7EDD\u5BF9\u8DEF\u5F84\u4E0E\u6253\u5F00\u65B9\u5F0F"
+      "\u4EA7\u51FA .svg + \u9884\u89C8 .html\uFF1B\u5B8C\u6210\u540E\u7ED9\u51FA\u6587\u4EF6\u7EDD\u5BF9\u8DEF\u5F84\u4E0E\u6253\u5F00\u65B9\u5F0F",
+      "\u7D20\u6750\u83B7\u53D6\uFF1A\u7528\u6237\u63D0\u5230\u300C\u6587\u6863/\u6587\u4EF6/\u4E0A\u4F20\u300D\u6216\u76EE\u6807\u91CC\u6709\u5177\u4F53\u6587\u5B57\u5185\u5BB9\u6765\u6E90\u65F6\uFF0C\u5148\u7528\u6587\u4EF6\u5DE5\u5177\u81EA\u5DF1\u5B9A\u4F4D\u5E76\u8BFB\u53D6\uFF08.md/.txt/.docx/.pdf \u7B49\u5E38\u89C1\u683C\u5F0F\uFF0C\u5728\u7528\u6237\u5DE5\u4F5C\u533A/\u5E38\u89C1\u6587\u6863\u4F4D\u7F6E\u627E\uFF09\uFF1B\u8BFB\u4E0D\u4E86\uFF08\u5982\u7F3A\u683C\u5F0F\u89E3\u6790\u80FD\u529B\uFF09\u5C31\u5982\u5B9E\u8BF4\u660E\u7F3A\u4EC0\u4E48\uFF0C\u5E76\u7528 ming_store_search \u627E\u6587\u6863\u89E3\u6790\u7C7B\u63D2\u4EF6\uFF1B\u786E\u5B9E\u627E\u4E0D\u5230\u7D20\u6750\u65F6\u6700\u591A\u95EE\u7528\u6237\u4E00\u6B21\uFF0C\u8981\u4E00\u53E5\u300C\u5927\u6982\u5728\u54EA\u4E2A\u6587\u4EF6\u5939\u300D\u5373\u53EF\uFF0C\u7EDD\u4E0D\u8BA9\u7528\u6237\u590D\u5236\u7C98\u8D34\u5168\u6587\u6216\u81EA\u5DF1\u627E\u8DEF\u5F84"
     ],
     capabilities: [
       { kind: "tool", id: "fs_*", purpose: "\u4EA7\u51FA SVG/HTML \u6587\u4EF6", trust: "official" },
@@ -175,7 +180,8 @@ var RECIPES = [
     guidance: [
       "\u5148\u63D0\u70BC\u8981\u70B9\uFF08\u7ED3\u8BBA\u5148\u884C\u3001\u4E00\u9875\u4E00\u4E2A\u4E3B\u9898\uFF09\uFF0C\u518D\u4EA7\u51FA\u5E7B\u706F\u7247",
       "\u4F18\u5148\u4EA7\u51FA HTML \u5E7B\u706F\u7247\uFF08\u6BCF\u9875\u4E00\u4E2A section\uFF0C\u5185\u8054 CSS\uFF0C\u6D4F\u89C8\u5668\u53EF\u7FFB\u9875\u6F14\u793A\uFF09\uFF1B\u82E5\u73AF\u5883\u6709 ppt_create \u80FD\u529B\u5219\u540C\u65F6\u4EA7\u51FA .pptx",
-      "\u914D\u56FE\u7528\u7EAF CSS/\u5F62\u72B6\u5373\u53EF\uFF0C\u4E0D\u4F9D\u8D56\u5916\u90E8\u56FE\u7247\uFF1B\u5B8C\u6210\u540E\u7ED9\u51FA\u6587\u4EF6\u8DEF\u5F84\u4E0E\u6253\u5F00\u65B9\u5F0F"
+      "\u914D\u56FE\u7528\u7EAF CSS/\u5F62\u72B6\u5373\u53EF\uFF0C\u4E0D\u4F9D\u8D56\u5916\u90E8\u56FE\u7247\uFF1B\u5B8C\u6210\u540E\u7ED9\u51FA\u6587\u4EF6\u8DEF\u5F84\u4E0E\u6253\u5F00\u65B9\u5F0F",
+      "\u7D20\u6750\u83B7\u53D6\uFF1A\u7528\u6237\u63D0\u5230\u300C\u6587\u6863/\u8D44\u6599/\u4E0A\u4F20\u300D\u65F6\uFF0C\u5148\u7528\u6587\u4EF6\u5DE5\u5177\u81EA\u5DF1\u5B9A\u4F4D\u5E76\u8BFB\u53D6\u7D20\u6750\uFF08.md/.docx/.txt \u7B49\uFF09\uFF0C\u4E0D\u8981\u6559\u7528\u6237\u627E\u8DEF\u5F84\u6216\u590D\u5236\u7C98\u8D34\uFF1B\u8BFB\u4E0D\u4E86\u5C31\u5982\u5B9E\u8BF4\u660E\u7F3A\u4EC0\u4E48\uFF0C\u786E\u5B9E\u627E\u4E0D\u5230\u65F6\u6700\u591A\u95EE\u4E00\u6B21\u7528\u6237\u5927\u6982\u4F4D\u7F6E"
     ],
     capabilities: [
       { kind: "tool", id: "fs_*", purpose: "\u4EA7\u51FA\u5E7B\u706F\u7247\u6587\u4EF6", trust: "official" },
@@ -215,6 +221,99 @@ var RECIPES = [
     verification: [
       { kind: "file_exists", pattern: "*.html", note: "\u5E94\u4EA7\u51FA HTML \u5E7B\u706F\u7247" },
       { kind: "content_match", pattern: "*.html", contains: "<html", note: "\u5E94\u4E3A\u6709\u6548 HTML \u6587\u6863" }
+    ]
+  },
+  {
+    id: "publish-site",
+    name: "\u53D1\u5E03\u7F51\u7AD9/\u4E0A\u7EBF\uFF08\u4E00\u6761\u9F99\uFF1A\u5EFA\u7AD9 \u2192 \u6821\u9A8C \u2192 \u53D1\u5E03\uFF09",
+    description: "\u4ECE\u96F6\u5230\u516C\u5F00\u8BBF\u95EE\u4E00\u6761\u9F99\uFF1A\u6CA1\u6709\u7AD9\u70B9\u5148\u5EFA\u4E00\u4E2A\uFF0C\u6821\u9A8C\u53EF\u6253\u5F00\uFF0C\u518D\u53D1\u5E03\u4E0A\u7EBF\uFF0C\u751F\u6210\u53EF\u516C\u5F00\u8BBF\u95EE\u7684\u5730\u5740",
+    triggers: ["\u53D1\u5E03", "\u4E0A\u7EBF", "\u90E8\u7F72", "deploy", "\u6258\u7BA1", "github pages", "vercel", "netlify", "\u8BA9\u522B\u4EBA\u80FD\u770B", "\u516C\u5F00\u8BBF\u95EE", "\u4E00\u6761\u9F99"],
+    guidance: [
+      "\u8FD9\u662F\u4E00\u6761\u591A\u6B65\u5DE5\u4F5C\u6D41\uFF1A\u5148\u786E\u4FDD\u6709\u7AD9\u70B9\uFF08\u6CA1\u6709\u5C31\u5EFA\uFF09\u2192 \u6821\u9A8C\u53EF\u6253\u5F00 \u2192 \u53D1\u5E03\u4E0A\u7EBF",
+      "\u7528\u6237\u63D0\u5230\u300C\u5148\u672C\u5730\u770B\u770B\u300D\u65F6\uFF0C\u53D1\u5E03\u6B65\u53EF\u4EE5\u53EA\u505A\u672C\u5730\u9884\u89C8\u5E76\u8BF4\u660E\u5982\u4F55\u672C\u5730\u6253\u5F00",
+      "\u53D1\u5E03\u80FD\u529B\u672A\u88C5\u914D\u65F6\uFF0C\u505C\u5728\u672C\u6B65\u5E76\u5F15\u5BFC\u88C5\u914D\uFF0C\u4E0D\u5047\u88C5\u5DF2\u53D1\u5E03"
+    ],
+    capabilities: [
+      { kind: "tool", id: "fs_*", purpose: "\u51C6\u5907\u4E0E\u68C0\u67E5\u53D1\u5E03\u5185\u5BB9", trust: "official" }
+    ],
+    delegate: { provider: "spawn" },
+    questions: [
+      {
+        key: "target",
+        question: "\u53D1\u5E03\u5230\u54EA\u91CC\u8BA9\u522B\u4EBA\u770B\uFF1F",
+        default: "\u5148\u672C\u5730\u9884\u89C8\uFF0C\u786E\u8BA4\u6CA1\u95EE\u9898\u518D\u53D1\u5E03",
+        options: ["\u5148\u672C\u5730\u9884\u89C8\uFF0C\u786E\u8BA4\u6CA1\u95EE\u9898\u518D\u53D1\u5E03", "GitHub Pages\uFF08\u514D\u8D39\u9759\u6001\u6258\u7BA1\uFF09", "Vercel\uFF08\u514D\u8D39\u9759\u6001\u6258\u7BA1\uFF09", "\u751F\u6210\u53EF\u53D1\u7ED9\u522B\u4EBA\u7684\u6253\u5305\u6587\u4EF6"],
+        translate: "\u7528\u6237\u8BF4\u300C\u514D\u8D39/\u4E0D\u8981\u94B1/\u767D\u5AD6\u300D\u2192 \u514D\u8D39\u9759\u6001\u6258\u7BA1\uFF08GitHub Pages \u6216 Vercel\uFF09\uFF1B\u300C\u81EA\u5DF1\u770B\u770B/\u5148\u770B\u6548\u679C\u300D\u2192 \u672C\u5730\u9884\u89C8\u5373\u53EF\uFF0C\u4E0D\u6025\u7740\u516C\u5F00\uFF1B\u300C\u53D1\u7ED9\u522B\u4EBA/\u522B\u4EBA\u80FD\u6253\u5F00\u300D\u2192 \u9700\u8981\u516C\u5F00\u6258\u7BA1\u5730\u5740\u3002"
+      },
+      {
+        key: "content",
+        question: "\u8981\u53D1\u5E03\u7684\u662F\u54EA\u4E2A\u6587\u4EF6\u5939/\u6587\u4EF6\uFF1F",
+        default: "\u5F53\u524D\u5DE5\u4F5C\u533A\u91CC\u521A\u505A\u597D\u7684\u7F51\u7AD9",
+        options: ["\u5F53\u524D\u5DE5\u4F5C\u533A\u91CC\u521A\u505A\u597D\u7684\u7F51\u7AD9", "\u6211\u6307\u5B9A\u4E00\u4E2A\u6587\u4EF6\u5939"],
+        translate: "\u7528\u6237\u8BF4\u300C\u521A\u505A\u7684/\u521A\u624D\u90A3\u4E2A/\u8FD9\u4E2A\u300D\u2192 \u5F53\u524D\u5DE5\u4F5C\u533A\u6700\u8FD1\u751F\u6210\u7684\u7AD9\u70B9\uFF1B\u300CXX \u6587\u4EF6\u5939\u300D\u2192 \u7528\u6237\u6307\u5B9A\u7684\u8DEF\u5F84\uFF08\u81EA\u5DF1\u5B9A\u4F4D\uFF0C\u4E0D\u8981\u8BA9\u5BF9\u65B9\u590D\u5236\u7C98\u8D34\u8DEF\u5F84\uFF09\u3002"
+      }
+    ],
+    verification: [
+      { kind: "file_exists", pattern: "*.html", note: "\u53D1\u5E03\u5185\u5BB9\u5E94\u5305\u542B HTML \u9875\u9762" },
+      { kind: "content_match", pattern: "*.html", contains: "<html", note: "\u5E94\u4E3A\u6709\u6548 HTML \u6587\u6863" }
+    ],
+    workflow: [
+      {
+        id: "prepare-site",
+        name: "\u51C6\u5907\u7AD9\u70B9\u5185\u5BB9",
+        goal: "\u786E\u4FDD\u5DE5\u4F5C\u533A\u91CC\u6709\u4E00\u4EFD\u53EF\u53D1\u5E03\u7684\u9759\u6001\u7F51\u7AD9\uFF1A\u82E5\u6CA1\u6709\uFF0C\u5C31\u57FA\u4E8E\u7528\u6237\u76EE\u6807\u73B0\u505A\u4E00\u7248\uFF08\u4E2A\u4EBA\u7F51\u7AD9/\u843D\u5730\u9875/\u4F5C\u54C1\u96C6\uFF09\uFF1B\u82E5\u6709\uFF0C\u786E\u8BA4 index.html \u7B49\u5173\u952E\u6587\u4EF6\u9F50\u5168\u3002",
+        guidance: [
+          "\u5148\u68C0\u67E5\u5DE5\u4F5C\u533A\u662F\u5426\u5DF2\u6709\u7F51\u7AD9\u6587\u4EF6\uFF08index.html \u7B49\uFF09\uFF1B\u6709\u5C31\u7528\u73B0\u6709\u7684\uFF0C\u6CA1\u6709\u5C31\u57FA\u4E8E\u7528\u6237\u76EE\u6807\u505A\u4E00\u7248",
+          "\u7528\u6237\u63D0\u5230\u7684\u4E3B\u9898/\u98CE\u683C/\u5185\u5BB9\u65B9\u5411\uFF08\u5982\u300C\u4F5C\u54C1\u96C6\u300D\u300C\u6DF1\u8272\u79D1\u6280\u98CE\u300D\uFF09\u6309\u786E\u8BA4\u7684\u65B9\u5411\u505A",
+          "\u5FC5\u987B\u4EA7\u51FA\u771F\u5B9E .html \u6587\u4EF6\u5E76\u62A5\u544A\u7EDD\u5BF9\u8DEF\u5F84\uFF0C\u4E0D\u8BB8\u53EA\u7ED9\u5EFA\u8BAE"
+        ],
+        verification: [
+          { kind: "file_exists", pattern: "*.html", note: "\u5E94\u6709 HTML \u9875\u9762" }
+        ],
+        pitfalls: [
+          { symptom: "\u5B50\u4EE3\u7406\u53EA\u7ED9\u4E86\u5EFA\u8BAE\u6CA1\u4EA7\u51FA\u6587\u4EF6", fix: "\u91CD\u8BD5\u65F6\u660E\u786E\u8981\u6C42\uFF1A\u5FC5\u987B\u4EA7\u51FA\u771F\u5B9E .html \u6587\u4EF6\u5E76\u62A5\u544A\u7EDD\u5BF9\u8DEF\u5F84" }
+        ]
+      },
+      {
+        id: "check-site",
+        name: "\u6821\u9A8C\u7AD9\u70B9\u53EF\u6253\u5F00",
+        goal: "\u68C0\u67E5\u7AD9\u70B9\uFF1A\u9996\u9875\u5B58\u5728\u3001\u662F\u6709\u6548 HTML\u3001\u5F15\u7528\u7684\u8D44\u6E90\uFF08css/js/\u56FE\u7247\uFF09\u8DEF\u5F84\u6B63\u786E\uFF0C\u6D4F\u89C8\u5668\u80FD\u76F4\u63A5\u6253\u5F00\u3002",
+        guidance: [
+          "\u7528\u6587\u4EF6\u5DE5\u5177\u68C0\u67E5 index.html \u662F\u5426\u5B58\u5728\u4E14\u5185\u5BB9\u6709\u6548\uFF08\u542B <html> \u6807\u7B7E\uFF09",
+          "\u68C0\u67E5\u5F15\u7528\u7684\u76F8\u5BF9\u8D44\u6E90\u8DEF\u5F84\u90FD\u5B58\u5728\uFF1B\u53D1\u73B0\u574F\u94FE\u5C31\u4FEE\u590D"
+        ],
+        verification: [
+          { kind: "content_match", pattern: "*.html", contains: "<html", note: "\u9996\u9875\u5E94\u4E3A\u6709\u6548 HTML" }
+        ],
+        pitfalls: [
+          { symptom: "\u9996\u9875\u662F\u7A7A\u6587\u4EF6\u6216\u7EAF\u6A21\u677F\u5360\u4F4D", fix: "\u786E\u8BA4\u9996\u9875\u6709\u771F\u5B9E\u5185\u5BB9\uFF08\u6807\u9898/\u6BB5\u843D/\u5BFC\u822A\uFF09\uFF0C\u4E0D\u662F\u7A7A\u58F3\u6A21\u677F" }
+        ]
+      },
+      {
+        id: "publish",
+        name: "\u53D1\u5E03\u4E0A\u7EBF",
+        goal: "\u628A\u7AD9\u70B9\u53D1\u5E03\u5230\u516C\u5F00\u5730\u5740\uFF0C\u8BA9\u522B\u4EBA\u80FD\u901A\u8FC7\u94FE\u63A5\u6253\u5F00\uFF1B\u6216\u6309\u7528\u6237\u8981\u6C42\u53EA\u505A\u672C\u5730\u9884\u89C8\u3002",
+        guidance: [
+          "\u4F18\u5148\u9759\u6001\u6258\u7BA1\uFF08GitHub Pages / Vercel / \u672C\u5730\u9759\u6001\u670D\u52A1\uFF09\uFF0C\u5148\u8BF4\u660E\u53D1\u5E03\u540E\u7684\u8BBF\u95EE\u65B9\u5F0F\u518D\u52A8\u624B",
+          "\u53D1\u5E03\u5B8C\u6210\u540E\u7ED9\u51FA\u53EF\u8BBF\u95EE\u7684\u5730\u5740\uFF08URL \u6216\u672C\u5730\u5730\u5740\uFF09\u548C\u9A8C\u8BC1\u65B9\u5F0F"
+        ],
+        capabilities: [
+          {
+            kind: "tool",
+            id: "publish_deploy",
+            source: "dsh-deploy-tools",
+            purpose: "\u628A\u9759\u6001\u7F51\u7AD9\u53D1\u5E03\u5230\u516C\u5F00\u5730\u5740",
+            trust: "community"
+          }
+        ],
+        verification: [
+          { kind: "file_exists", pattern: "*.html", note: "\u53D1\u5E03\u5185\u5BB9\u5E94\u5305\u542B HTML \u9875\u9762" }
+        ],
+        pitfalls: [
+          { symptom: "\u6CA1\u6709\u53D1\u5E03/\u90E8\u7F72\u80FD\u529B\uFF08\u672A\u88C5\u914D publish_deploy\uFF09", fix: "\u6309\u6307\u5F15\u8D70 ming_install \u88C5\u914D\u95ED\u73AF\uFF1A\u641C\u7D22\u5019\u9009\u7ED9\u7528\u6237\u9009\u2192\u5B89\u88C5\u2192\u91CD\u542F\u2192\u4ECE\u53D1\u5E03\u6B65\u7EE7\u7EED" },
+          { symptom: "\u53D1\u5E03\u540E\u94FE\u63A5\u6253\u4E0D\u5F00", fix: "\u68C0\u67E5\u662F\u5426\u771F\u7684\u4E0A\u4F20\u4E86 index.html\uFF1B\u514D\u8D39\u6258\u7BA1\u9996\u6B21\u751F\u6548\u53EF\u80FD\u9700\u7B49 1~2 \u5206\u949F" }
+        ]
+      }
     ]
   }
 ];
@@ -276,6 +375,13 @@ async function probeCapability(ctx, ref) {
     installHint: `\u80FD\u529B ${ref.kind}:${ref.id} \u672A\u88C5\u914D${ref.source ? `\uFF1B\u53EF\u5C1D\u8BD5 dsh plugin add ${ref.source}` : ""}`
   };
 }
+async function probeCapabilities(ctx, refs) {
+  const out = [];
+  for (const ref of refs) {
+    out.push(await probeCapability(ctx, ref));
+  }
+  return out;
+}
 function planFromRecipe(goal, recipe, matchedBy, capabilities) {
   const missingRequired = capabilities.filter((c) => !c.available && !c.ref.optional).map((c) => `${c.ref.kind}:${c.ref.id}`);
   return {
@@ -288,6 +394,7 @@ function planFromRecipe(goal, recipe, matchedBy, capabilities) {
     delegate: recipe.delegate ?? DEFAULT_DELEGATE,
     verification: recipe.verification,
     questions: recipe.questions,
+    workflow: recipe.workflow,
     executable: missingRequired.length === 0,
     missingRequired
   };
@@ -405,6 +512,105 @@ function formatClarify(status) {
   }
   lines.push("", "\u6BCF\u786E\u8BA4\u4E00\u70B9\u5C31\u8C03\u7528\u4E00\u6B21 ming_clarify \u4F20\u5165\u65B0\u7B54\u6848\uFF1B\u90FD\u786E\u8BA4\u4E86\u5B83\u4F1A\u63D0\u793A\u5F00\u59CB\u505A\u3002");
   return lines.join("\n");
+}
+
+// src/capabilities/recommend.ts
+function tokensOf(text) {
+  return (text ?? "").toLowerCase().split(/[^\p{L}\p{N}]+/u).map((t) => t.trim()).filter((t) => t.length >= 2 && !/^\d+$/u.test(t));
+}
+function rankCandidates(candidates, ctx, textOf, signalOf) {
+  const queryTokens = [...new Set(tokensOf(ctx.query ?? ""))];
+  const scenarioTerms = (ctx.scenario ?? []).map((s) => s.trim().toLowerCase()).filter((s) => s.length >= 2);
+  const scored = candidates.map((candidate) => {
+    const text = (textOf(candidate) ?? "").toLowerCase();
+    const queryHits = queryTokens.filter((t) => text.includes(t));
+    const scenarioHits = scenarioTerms.filter((s) => text.includes(s));
+    const { stars = 0, installCount = 0 } = signalOf(candidate) ?? {};
+    const score = queryHits.length * 2 + scenarioHits.length * 3 + Math.log10(1 + Math.max(0, stars)) * 0.5 + Math.log10(1 + Math.max(0, installCount)) * 0.25;
+    return { candidate, score, queryHits, scenarioHits };
+  });
+  return scored.sort((a, b) => b.score - a.score);
+}
+function buildRecommendationReason(candidateText, ctx, signals, hits) {
+  const parts = [];
+  const scenarioHits = hits?.scenarioHits ?? [];
+  const queryHits = hits?.queryHits ?? [];
+  if (scenarioHits.length > 0) {
+    parts.push(`\u547D\u4E2D\u4F60\u786E\u8BA4\u7684\u65B9\u5411\u300C${scenarioHits.slice(0, 2).join("\u3001")}\u300D`);
+  } else if (queryHits.length > 0) {
+    parts.push(`\u5BF9\u5E94\u4F60\u7684\u9700\u6C42\u300C${queryHits.slice(0, 2).join("\u3001")}\u300D`);
+  }
+  if (ctx.purpose) {
+    parts.push(`\u8865\u4E0A\u7F3A\u53E3\u80FD\u529B\uFF1A${ctx.purpose}`);
+  }
+  const stars = signals.stars ?? 0;
+  const installCount = signals.installCount ?? 0;
+  if (stars > 0) {
+    parts.push(stars >= 1e3 ? `\u793E\u533A\u70ED\u9009\uFF08\u2B50${Math.round(stars / 1e3)}k\uFF09` : `\u2B50${stars}`);
+  }
+  if (installCount > 0) {
+    parts.push(`\u5DF2\u6709 ${installCount} \u6B21\u5B89\u88C5`);
+  }
+  if (parts.length === 0) {
+    parts.push("\u5019\u9009\u4E4B\u4E00\uFF0C\u4F9B\u5BF9\u6BD4");
+  }
+  return parts.join("\uFF1B");
+}
+var VAGUE_TOKENS = /* @__PURE__ */ new Set([
+  "read",
+  "get",
+  "gen",
+  "run",
+  "make",
+  "list",
+  "show",
+  "view",
+  "parse",
+  "convert",
+  "create",
+  "build",
+  "set",
+  "add",
+  "do",
+  "to",
+  "for",
+  "of",
+  "the",
+  "a",
+  "an",
+  "and",
+  "with",
+  "from",
+  "use",
+  "using",
+  "tool",
+  "plugin",
+  "skill",
+  "auto",
+  "gen"
+]);
+var CJK_LEAD = /^[把将让用从在到给为和与是做了请帮我它这那要可以能出后及以及或其之]/u;
+function suggestQueryFor(purpose, id) {
+  const p = (purpose ?? "").trim();
+  const en = p.toLowerCase().match(/[a-z]{3,}/g);
+  if (en) {
+    const concrete = en.find((t) => !VAGUE_TOKENS.has(t));
+    if (concrete) return concrete;
+  }
+  const idTokens = id.split(/[_-]/).filter((t) => /^[a-z]{3,}$/u.test(t));
+  if (idTokens.length >= 2) {
+    const concrete = idTokens.find((t) => !VAGUE_TOKENS.has(t));
+    if (concrete) return concrete;
+    return idTokens[idTokens.length - 1];
+  }
+  const cjkRuns = p.match(/[\u4e00-\u9fff]{2,}/g);
+  if (cjkRuns) {
+    for (const run of cjkRuns) {
+      const stripped = run.replace(CJK_LEAD, "") || run;
+      if (stripped.length >= 2) return stripped.slice(0, 2);
+    }
+  }
+  return id;
 }
 
 // src/capabilities/verifier.ts
@@ -808,6 +1014,30 @@ function nextStepsFor(outcome) {
       return ["\u7A0D\u540E\u91CD\u8BD5", "\u82E5\u6301\u7EED\u5931\u8D25\uFF0C\u53EF\u643A\u5E26\u8BC1\u636E\u5361\u5185\u5BB9\u53CD\u9988\u95EE\u9898"];
   }
 }
+function workflowNextSteps(result, answers) {
+  const steps = [];
+  if (result.failureKind === "capability-missing") {
+    const blocked = result.stepResults.find((r) => r.blockedBy);
+    if (blocked?.blockedBy) {
+      const ref = blocked.blockedBy.ref;
+      const q = suggestQueryFor(ref.purpose, ref.id);
+      const answersText = answers && Object.keys(answers).length > 0 ? `\uFF0Canswers=${JSON.stringify(answers)}` : "";
+      steps.push(`\u8C03\u7528 ming_install\uFF08mode=search\uFF0Cquery=\u300C${q}\u300D\uFF0Cpurpose=\u300C${ref.purpose ?? ""}\u300D${answersText}\uFF09\u641C\u7D22\u66FF\u4EE3\u63D2\u4EF6\uFF0C\u5019\u9009\u6309\u4F60\u7684\u9700\u6C42\u6392\u597D\u5E8F\u5C55\u793A\u7ED9\u4F60\u9009`);
+      steps.push(`\u7528\u6237\u9009\u5B9A\u540E\u5B89\u88C5\uFF0C\u91CD\u542F DSH\uFF0C\u7136\u540E\u7528\u6237\u8BF4\u300C\u7EE7\u7EED\u300D\uFF0C\u628A workflowFrom=${blocked.step.id} \u4F20\u7ED9 ming_auto \u4ECE\u5931\u8D25\u6B65\u7EE7\u7EED\uFF08\u524D\u9762\u5DF2\u5B8C\u6210\uFF0C\u4E0D\u91CD\u505A\uFF09`);
+    }
+  } else if (result.failureKind === "step-failed" || result.failureKind === "verification-failed") {
+    const pit = result.pitfalls ?? [];
+    if (pit.length > 0) {
+      for (const p of pit.slice(0, 3)) {
+        steps.push(`\u82E5\u73B0\u8C61\u662F\u300C${p.symptom}\u300D\u2192 ${p.fix}`);
+      }
+    }
+    steps.push("\u91CD\u8DD1\u540C\u4E00\u76EE\u6807\u518D\u8BD5\u4E00\u6B21\uFF1B\u53CD\u590D\u5931\u8D25\u65F6\u628A\u5931\u8D25\u73B0\u8C61\u544A\u8BC9\u6211");
+  } else {
+    steps.push("\u67E5\u770B\u4E0A\u9762\u5217\u51FA\u7684\u4EA7\u51FA\u6587\u4EF6", "\u6EE1\u610F\u540E\u53EF\u7EE7\u7EED\u4E0B\u4E00\u4E2A\u4EFB\u52A1");
+  }
+  return steps;
+}
 function appendMissingNotice(outcome) {
   const missing = (outcome.artifactChecks ?? []).filter((c) => c.kind === "missing");
   if (!outcome.success || missing.length === 0) return outcome.summary;
@@ -816,6 +1046,104 @@ function appendMissingNotice(outcome) {
 
 \u26A0\uFE0F \u6821\u9A8C\u63D0\u9192\uFF1A\u4EE5\u4E0B\u6C47\u62A5\u4E2D\u7684\u8DEF\u5F84\u5728\u672C\u5730\u672A\u627E\u5230\uFF0C\u8BF7\u4EE5\u5B9E\u9645\u78C1\u76D8\u4E3A\u51C6\uFF1A
 ${lines.join("\n")}`;
+}
+
+// src/services/workflow.ts
+function buildStepGoal(goal, step, resuming) {
+  const lines = [
+    `\u3010\u6574\u4F53\u76EE\u6807\u3011
+${goal}`,
+    "",
+    `\u3010\u5F53\u524D\u8FD9\u4E00\u6B65\uFF08${step.name}\uFF09\u3011
+${step.goal}`
+  ];
+  if (resuming) {
+    lines.push("", "\u8BF4\u660E\uFF1A\u524D\u9762\u7684\u6B65\u9AA4\u5728\u6B64\u524D\u8FD0\u884C\u4E2D\u5DF2\u5B8C\u6210\uFF08\u4EA7\u7269\u5DF2\u843D\u76D8\uFF09\uFF0C\u672C\u6B65\u76F4\u63A5\u57FA\u4E8E\u73B0\u6709\u6587\u4EF6\u7EE7\u7EED\uFF0C\u4E0D\u8981\u91CD\u505A\u3002");
+  }
+  return lines.join("\n");
+}
+async function runWorkflow(ctx, exec, goal, resources, steps, workdir, options = {}) {
+  const startedAt = Date.now();
+  const stepResults = [];
+  const fromId = options.workflowFrom;
+  let reachedFrom = !fromId;
+  for (const step of steps) {
+    if (!reachedFrom) {
+      if (step.id === fromId) {
+        reachedFrom = true;
+      } else {
+        stepResults.push({ step, skipped: true });
+        continue;
+      }
+    }
+    if (step.capabilities && step.capabilities.length > 0) {
+      const caps = await probeCapabilities(ctx, step.capabilities);
+      const missing = caps.find((c) => !c.available && !c.ref.optional);
+      if (missing) {
+        stepResults.push({ step, skipped: false, blockedBy: missing });
+        return {
+          success: false,
+          failedStepId: step.id,
+          failureKind: "capability-missing",
+          stepResults,
+          pitfalls: step.pitfalls,
+          summary: `\u6B65\u9AA4\u300C${step.name}\u300D\u9700\u8981\u80FD\u529B\u300C${missing.ref.kind}:${missing.ref.id}\u300D\uFF08${missing.ref.purpose ?? ""}\uFF09\u4F46\u672C\u673A\u672A\u88C5\u914D\uFF0C\u672A\u6267\u884C\u3002\u8BF7\u5148\u88C5\u914D\u8BE5\u80FD\u529B\u3002`,
+          durationMs: Date.now() - startedAt
+        };
+      }
+    }
+    const resuming = fromId !== void 0 && step.id === fromId;
+    const stepGoal = buildStepGoal(goal, step, resuming);
+    const outcome = await execute(ctx, stepGoal, resources, exec, {
+      contextual: [...options.baseContext ?? [], ...step.guidance ?? []]
+    });
+    if (!outcome.success) {
+      stepResults.push({ step, outcome, skipped: false });
+      return {
+        success: false,
+        failedStepId: step.id,
+        failureKind: "step-failed",
+        stepResults,
+        pitfalls: step.pitfalls,
+        summary: `\u6B65\u9AA4\u300C${step.name}\u300D\u6267\u884C\u5931\u8D25\uFF1A${outcome.summary}`,
+        durationMs: Date.now() - startedAt
+      };
+    }
+    let verification;
+    if (step.verification && step.verification.length > 0) {
+      verification = await verifyChecks(step.verification, workdir);
+      if (verification.failed > 0) {
+        stepResults.push({ step, outcome, verification, skipped: false });
+        return {
+          success: false,
+          failedStepId: step.id,
+          failureKind: "verification-failed",
+          stepResults,
+          pitfalls: step.pitfalls,
+          summary: `\u6B65\u9AA4\u300C${step.name}\u300D\u4EA7\u51FA\u672A\u901A\u8FC7\u9A8C\u6536\uFF1A${formatVerification(verification)}`,
+          durationMs: Date.now() - startedAt
+        };
+      }
+    }
+    stepResults.push({ step, outcome, verification, skipped: false });
+  }
+  const skippedCount = stepResults.filter((r) => r.skipped).length;
+  const doneCount = stepResults.length - skippedCount;
+  return {
+    success: true,
+    stepResults,
+    summary: `\u5DE5\u4F5C\u6D41\u5B8C\u6210\uFF1A${doneCount} \u6B65\u6267\u884C\u6210\u529F${skippedCount > 0 ? `\uFF0C${skippedCount} \u6B65\u6309\u300C\u7EE7\u7EED\u300D\u8DF3\u8FC7\uFF08\u6B64\u524D\u5DF2\u5B8C\u6210\uFF09` : ""}`,
+    durationMs: Date.now() - startedAt
+  };
+}
+function collectWorkflowArtifacts(result) {
+  const out = /* @__PURE__ */ new Set();
+  for (const r of result.stepResults) {
+    for (const a of r.outcome?.artifacts ?? []) {
+      if (a) out.add(a);
+    }
+  }
+  return [...out];
 }
 
 // src/capabilities/store.ts
@@ -865,6 +1193,225 @@ function formatStoreResult(result, max = 5) {
   return lines.join("\n");
 }
 
+// src/services/installer.ts
+import { spawn } from "child_process";
+import { access, readFile as readFile2, readdir as readdir2 } from "fs/promises";
+import { homedir } from "os";
+import { basename, join as join2 } from "path";
+import { fileURLToPath } from "url";
+function parseInstallCommand(install) {
+  const tokens = (install ?? "").trim().split(/\s+/);
+  if (tokens.length === 0 || !tokens[0]) {
+    throw new Error("\u5B89\u88C5\u547D\u4EE4\u4E3A\u7A7A");
+  }
+  const first = tokens[0].toLowerCase().replace(/\.(cmd|exe|bat)$/u, "");
+  if (first !== "dsh") {
+    throw new Error(`\u975E\u6CD5\u5B89\u88C5\u547D\u4EE4\uFF08\u5FC5\u987B\u4EE5 dsh \u5F00\u5934\uFF09\uFF1A${install}`);
+  }
+  if (tokens[1] !== "plugin") {
+    throw new Error(`\u975E\u6CD5\u5B89\u88C5\u547D\u4EE4\uFF08\u7F3A\u5C11 plugin \u5B50\u547D\u4EE4\uFF09\uFF1A${install}`);
+  }
+  let profile;
+  let source;
+  for (let i = 2; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t === "--profile" || t === "-p") {
+      profile = tokens[i + 1];
+      i++;
+      continue;
+    }
+    if (t === "add") continue;
+    if (t.startsWith("-")) continue;
+    source = t;
+  }
+  if (!source) {
+    throw new Error(`\u5B89\u88C5\u547D\u4EE4\u7F3A\u5C11\u63D2\u4EF6\u6E90\uFF1A${install}`);
+  }
+  return { source, profile };
+}
+function buildInstallArgs(source, profile, dshBin) {
+  const common = ["plugin", "--profile", profile, "add", source];
+  return dshBin ? [dshBin, ...common] : common;
+}
+function buildInstallCommand(source, profile, dshBin) {
+  const common = ["plugin", "--profile", profile, "add", source];
+  if (dshBin) {
+    return { args: [dshBin, ...common], command: `node ${dshBin} ${common.join(" ")}` };
+  }
+  return { args: common, command: `dsh ${common.join(" ")}` };
+}
+function dshBinCandidates(fromDir) {
+  const candidates = [];
+  const envBin = process.env.DSH_BIN;
+  if (envBin) candidates.push(envBin);
+  candidates.push(join2(fromDir, "..", "..", "..", "..", "@deepseek-ai", "dsh", "lib", "bin.js"));
+  candidates.push(join2(fromDir, "..", "..", "..", "node_modules", "@deepseek-ai", "dsh", "lib", "bin.js"));
+  return candidates;
+}
+function resolveDshHome() {
+  return process.env.DSH_HOME || join2(homedir(), ".dsh");
+}
+function profileDirsOf(home) {
+  return [join2(home, "profiles")];
+}
+function matchReason(plugin, query) {
+  const haystack = `${plugin.name} ${plugin.description?.en ?? ""} ${plugin.description?.zh ?? ""} ${plugin.category ?? ""}`.toLowerCase();
+  const q = (query ?? "").trim().toLowerCase();
+  const hit = q.split(/\s+/).find((kw) => kw.length >= 2 && haystack.includes(kw));
+  const stars = plugin.stars ? `\uFF08\u2B50${plugin.stars}\uFF09` : "";
+  if (hit) return `\u540D\u79F0/\u63CF\u8FF0\u547D\u4E2D\u300C${hit}\u300D${stars}`;
+  return `\u5019\u9009\u4E4B\u4E00${stars}\uFF0C\u63CF\u8FF0\u672A\u76F4\u63A5\u547D\u4E2D\u641C\u7D22\u8BCD\uFF0C\u4F9B\u5BF9\u6BD4`;
+}
+async function resolveDshBin() {
+  const moduleDir = fileURLToPath(new URL(".", import.meta.url));
+  for (const candidate of dshBinCandidates(moduleDir)) {
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+    }
+  }
+  return null;
+}
+async function resolveProfileName() {
+  const envProfile = process.env.DSH_PROFILE;
+  if (envProfile) return envProfile;
+  const home = resolveDshHome();
+  for (const profilesDir of profileDirsOf(home)) {
+    try {
+      const entries = await readdir2(profilesDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const pkgPath = join2(profilesDir, entry.name, "package.json");
+        try {
+          const text = await readFile2(pkgPath, "utf-8");
+          if (text.includes("@mingworkbench/capability-pack")) return entry.name;
+        } catch {
+        }
+      }
+    } catch {
+    }
+  }
+  return "ming";
+}
+async function checkInstalled(source) {
+  const home = resolveDshHome();
+  const profile = await resolveProfileName();
+  const profilesDir = join2(home, "profiles");
+  const withoutGitHub = source.replace(/^github:/u, "");
+  const sourceName = basename(withoutGitHub);
+  const pkgPath = join2(profilesDir, profile, "package.json");
+  try {
+    const text = await readFile2(pkgPath, "utf-8");
+    if (text.includes(source) || text.includes(sourceName)) {
+      return { confirmed: true, detail: `profile\u300C${profile}\u300D\u7684 package.json \u5DF2\u5305\u542B ${source}` };
+    }
+  } catch {
+  }
+  const scopeMatch = withoutGitHub.match(/^(@[^/]+)\//u);
+  const dirs = scopeMatch ? [join2(profilesDir, "node_modules", withoutGitHub), join2(profilesDir, "node_modules", scopeMatch[1])] : [join2(profilesDir, "node_modules", sourceName)];
+  for (const dir of dirs) {
+    try {
+      await access(dir);
+      return { confirmed: true, detail: `\u5DF2\u5728 ${profilesDir} \u4E0B\u627E\u5230\u5305\u76EE\u5F55 ${dir}` };
+    } catch {
+    }
+  }
+  return {
+    confirmed: false,
+    detail: `\u672A\u5728 profile\u300C${profile}\u300D\u4E2D\u786E\u8BA4 ${source}\uFF08\u53EF\u80FD\u5199\u5165\u5176\u4ED6 profile\uFF0C\u6216\u5B89\u88C5\u5C1A\u672A\u5B8C\u6210\uFF09`
+  };
+}
+async function runDshInstall(source, opts = {}) {
+  const profile = await resolveProfileName();
+  const dshBin = await resolveDshBin();
+  const { args, command } = buildInstallCommand(source, profile, dshBin);
+  const timeoutMs = opts.timeoutMs ?? 5 * 60 * 1e3;
+  return new Promise((resolve2) => {
+    let child;
+    try {
+      if (dshBin) {
+        child = spawn(process.execPath, args, { stdio: ["ignore", "pipe", "pipe"] });
+      } else {
+        child = process.platform === "win32" ? spawn("cmd.exe", ["/d", "/s", "/c", command], { stdio: ["ignore", "pipe", "pipe"] }) : spawn(args[0], args, { stdio: ["ignore", "pipe", "pipe"] });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      resolve2({ ok: false, exitCode: null, output: `\u542F\u52A8 dsh \u5931\u8D25\uFF1A${message}`, bin: dshBin, profile, command });
+      return;
+    }
+    let output = "";
+    child.stdout?.on("data", (chunk) => {
+      output += String(chunk);
+    });
+    child.stderr?.on("data", (chunk) => {
+      output += String(chunk);
+    });
+    const timer = setTimeout(() => {
+      try {
+        child.kill();
+      } catch {
+      }
+    }, timeoutMs);
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      resolve2({ ok: false, exitCode: null, output: `${output}
+[ming] dsh \u542F\u52A8\u5931\u8D25\uFF1A${err.message}`, bin: dshBin, profile, command });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve2({ ok: code === 0, exitCode: code, output, bin: dshBin, profile, command });
+    });
+  });
+}
+async function installCapability(source) {
+  const exec = await runDshInstall(source);
+  if (!exec.ok) {
+    return {
+      ok: false,
+      installed: false,
+      confirmed: false,
+      detail: `\u5B89\u88C5\u547D\u4EE4\u6267\u884C\u5931\u8D25\uFF08\u9000\u51FA\u7801 ${exec.exitCode ?? "\u672A\u77E5"}\uFF09\u3002\u53EF\u624B\u52A8\u6267\u884C\uFF1A${exec.command}`,
+      output: exec.output.trim(),
+      command: exec.command,
+      profile: exec.profile,
+      nextSteps: [
+        `\u624B\u52A8\u6267\u884C\u5B89\u88C5\u547D\u4EE4\uFF1A${exec.command}`,
+        "\u88C5\u597D\u540E\u5B8C\u5168\u91CD\u542F DSH\uFF0C\u518D\u8BF4\u4E00\u904D\u76EE\u6807\u8BA9 Ming \u590D\u7528\u65B0\u80FD\u529B"
+      ]
+    };
+  }
+  const check = await checkInstalled(source);
+  if (check.confirmed) {
+    return {
+      ok: true,
+      installed: true,
+      confirmed: true,
+      detail: `\u5B89\u88C5\u6210\u529F\uFF0C\u5DF2\u786E\u8BA4\u5199\u5165\uFF1A${check.detail}\u3002\u91CD\u542F DSH \u540E\u65B0\u80FD\u529B\u751F\u6548\u3002`,
+      output: exec.output.trim(),
+      command: exec.command,
+      profile: exec.profile,
+      nextSteps: [
+        "\u5B8C\u5168\u91CD\u542F DSH\uFF08\u5173\u95ED\u7A97\u53E3 + \u9000\u51FA\u6258\u76D8\u56FE\u6807\uFF09",
+        "\u91CD\u542F\u540E\u518D\u8BF4\u4E00\u904D\u76EE\u6807\uFF0CMing \u4F1A\u81EA\u52A8\u590D\u7528\u521A\u88C5\u914D\u7684\u80FD\u529B"
+      ]
+    };
+  }
+  return {
+    ok: true,
+    installed: true,
+    confirmed: false,
+    detail: `\u5B89\u88C5\u547D\u4EE4\u5DF2\u6210\u529F\u6267\u884C\uFF0C\u4F46\u672A\u80FD\u786E\u8BA4\u5199\u5165 profile\u300C${exec.profile}\u300D\uFF08${check.detail}\uFF09\u3002`,
+    output: exec.output.trim(),
+    command: exec.command,
+    profile: exec.profile,
+    nextSteps: [
+      "\u91CD\u542F DSH \u540E\u9A8C\u8BC1\u65B0\u80FD\u529B\u662F\u5426\u751F\u6548",
+      `\u82E5\u672A\u751F\u6548\uFF0C\u624B\u52A8\u6267\u884C\u5B89\u88C5\u547D\u4EE4\uFF1A${exec.command}`
+    ]
+  };
+}
+
 export {
   assembleContext,
   RECIPES,
@@ -878,6 +1425,10 @@ export {
   formatStrategyOptions,
   clarifyStatus,
   formatClarify,
+  tokensOf,
+  rankCandidates,
+  buildRecommendationReason,
+  suggestQueryFor,
   verifyChecks,
   formatVerification,
   matchesSimplePatternForTest,
@@ -889,7 +1440,21 @@ export {
   kindFromStopReason,
   stopReasonText,
   nextStepsFor,
+  workflowNextSteps,
   appendMissingNotice,
+  runWorkflow,
+  collectWorkflowArtifacts,
   searchStorePlugins,
-  formatStoreResult
+  formatStoreResult,
+  parseInstallCommand,
+  buildInstallArgs,
+  buildInstallCommand,
+  dshBinCandidates,
+  resolveDshHome,
+  profileDirsOf,
+  matchReason,
+  resolveProfileName,
+  checkInstalled,
+  runDshInstall,
+  installCapability
 };

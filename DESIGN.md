@@ -64,6 +64,31 @@ await run.dispose()
 每次任务写一张 JSON 到 `ming-evidence/evidence-<ts>.json`，记录目标、
 资源与执行结果，便于追溯与验证。
 
+## 能力装配闭环（v0.7 起）
+
+方案声明的能力缺失时，不再「贴安装指引」了事，而是走一条可验证的闭环：
+
+```
+缺口（missingRequired）
+      ↓
+ming_install(mode=search)   → 1024Store 结构化候选（含「为什么配你」的匹配理由）
+      ↓
+主模型展示 → 用户选定（Ming 只提选项，不替用户决定）
+      ↓
+ming_install(mode=install)  → 解析「dsh plugin add」命令（parseInstallCommand 只接受该形态）
+      ↓
+spawn 执行（自动定位 dsh bin / profile，带超时）
+      ↓
+核对写入（profile package.json / node_modules，区分「已确认」与「需手动」）
+      ↓
+证据卡 + 「重启 DSH → 重跑目标」指引
+```
+
+安全红线：
+
+- 只执行「dsh plugin add <source>」形态；市场返回的原始命令字符串**解析后用自己的参数重建**，绝不直接交给 shell；
+- 安装永远等用户明确选定后才触发；搜索免费只读。
+
 ## 扩展点
 
 - 想增强执行质量：调整 `buildPrompt()` 里的引导语；

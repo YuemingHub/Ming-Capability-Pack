@@ -31,6 +31,30 @@ export type VerificationCheck =
   | { kind: 'content_match'; pattern: string; contains: string; note?: string }
   | { kind: 'dir_nonempty'; pattern: string; note?: string }
 
+/** 工作流某一步常见的坑：用户「搞半天搞不定」的那些原因 + 修法 */
+export interface Pitfall {
+  /** 失败时的常见现象（人话） */
+  symptom: string
+  /** 对应的解决办法（人话） */
+  fix: string
+}
+
+/** 工作流里的一个步骤：独立委派一次子代理执行，做完独立验收 */
+export interface WorkflowStep {
+  id: string
+  name: string
+  /** 本步要完成的事（给子代理的目标描述，会与用户原始目标合并） */
+  goal: string
+  /** 本步的执行要求（人话，注入子代理 prompt） */
+  guidance?: string[]
+  /** 本步需要但可能未装配的能力（如发布步需要 publish_deploy） */
+  capabilities?: CapabilityRef[]
+  /** 本步完成后的验收断言（不过则停在本步） */
+  verification?: VerificationCheck[]
+  /** 本步常见坑与修法（失败时给用户的具体提示） */
+  pitfalls?: Pitfall[]
+}
+
 /** 执行前需要向用户澄清的关键问题（只问必要的，其余用默认值） */
 export interface ClarifyQuestion {
   /** 答案在装配上下文里的键名（系统逻辑维度的标识） */
@@ -69,6 +93,8 @@ export interface Recipe {
   delegate?: { provider: 'spawn' | 'fork' }
   /** 验收断言：执行结束后独立检查 */
   verification: VerificationCheck[]
+  /** 多步工作流（逐步执行、逐步验收；缺省为单步直接委派） */
+  workflow?: WorkflowStep[]
   /** 执行前可能需要澄清的关键问题（默认值兜底；策略 mvp-first 时跳过） */
   questions?: ClarifyQuestion[]
 }
@@ -98,6 +124,8 @@ export interface CapabilityPlan {
   executable: boolean
   /** 缺失的必选能力（可执行时为 []） */
   missingRequired: string[]
+  /** 多步工作流（方案声明时存在；单步方案为 undefined） */
+  workflow?: WorkflowStep[]
   /** 方案声明的澄清问题（供 clarify-first 策略用；未命中方案为空） */
   questions?: ClarifyQuestion[]
 }

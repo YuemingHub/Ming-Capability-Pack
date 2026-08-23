@@ -8,7 +8,7 @@ echo  ================================================
 echo    Ming Installer - installing, please wait...
 echo  ================================================
 echo.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$u='https://registry.npmmirror.com/@mingworkbench/capability-pack/-/capability-pack-0.6.3.tgz';$t=$env:TEMP+'\ming.tgz';[Console]::OutputEncoding=[Text.Encoding]::UTF8;Invoke-WebRequest $u -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$u='https://registry.npmmirror.com/@mingworkbench/capability-pack/-/capability-pack-0.8.0.tgz';$t=$env:TEMP+'\ming.tgz';[Console]::OutputEncoding=[Text.Encoding]::UTF8;Invoke-WebRequest $u -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s"
 echo.
 echo  If you see a problem above, take a screenshot and send it to the person who gave you this file.
 echo.
