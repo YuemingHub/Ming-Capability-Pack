@@ -69,6 +69,7 @@ export {
   type ParsedInstallCommand,
 } from './services/installer.js'
 export { formatMingResult } from './tools/ming-auto.js'
+export { hashGoal, writeEvidence } from './services/evidence-collector.js'
 export type {
   ArtifactCheck,
   ErrorKind,

@@ -28,6 +28,7 @@ import {
   formatVerification,
   formatVte,
   getRecipe,
+  hashGoal,
   installCapability,
   kindFromStopReason,
   looksLikeLocalPath,
@@ -59,8 +60,9 @@ import {
   validateRecipeProtocol,
   validateVerificationChecks,
   verifyChecks,
-  workflowNextSteps
-} from "./chunk-5RM3N75L.js";
+  workflowNextSteps,
+  writeEvidence
+} from "./chunk-2VOHPUAY.js";
 export {
   ACCEPTANCE_PROTOCOL_VERSION,
   CURATED_CAPABILITIES,
@@ -91,6 +93,7 @@ export {
   formatVerification,
   formatVte,
   getRecipe,
+  hashGoal,
   installCapability,
   kindFromStopReason,
   looksLikeLocalPath,
@@ -122,5 +125,6 @@ export {
   validateRecipeProtocol,
   validateVerificationChecks,
   verifyChecks,
-  workflowNextSteps
+  workflowNextSteps,
+  writeEvidence
 };

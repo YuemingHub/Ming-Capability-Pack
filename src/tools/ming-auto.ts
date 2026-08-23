@@ -18,7 +18,7 @@ import { formatVerification, verifyChecks } from '../capabilities/verifier.js'
 import type { CapabilityPlan } from '../capabilities/types.js'
 import { appendAcceptanceRecord, failedKindsOf, formatAcceptance, readAcceptanceHistory, summarizeAcceptance } from '../services/acceptance-log.js'
 import { execute, resolveWorkdir } from '../services/executor.js'
-import { writeEvidence } from '../services/evidence-collector.js'
+import { hashGoal, writeEvidence } from '../services/evidence-collector.js'
 import { appendMissingNotice, nextStepsFor, workflowNextSteps } from '../services/next-steps.js'
 import { collectWorkflowArtifacts, runWorkflow, type WorkflowResult } from '../services/workflow.js'
 import type { ExecutionOutcome, MingResult } from '../types.js'
@@ -208,6 +208,11 @@ export function registerMingAutoTool(ctx: Context): void {
             ? { id: plan.recipeId, name: plan.recipeName, matchedBy: plan.matchedBy, capabilities: plan.capabilities }
             : undefined,
           verification,
+          provenance: {
+            source: 'auto',
+            goalHash: hashGoal(goal),
+            recipeId: plan.recipeId,
+          },
         })
         evidencePath = evidence.path
       } catch {
@@ -288,6 +293,11 @@ async function workflowToResult(
       outcome,
       workdir,
       recipe: plan.recipeId ? { id: plan.recipeId, name: plan.recipeName, matchedBy: plan.matchedBy, capabilities: plan.capabilities } : undefined,
+      provenance: {
+        source: 'auto',
+        goalHash: hashGoal(goal),
+        recipeId: plan.recipeId,
+      },
     })
     evidencePath = evidence.path
   } catch {

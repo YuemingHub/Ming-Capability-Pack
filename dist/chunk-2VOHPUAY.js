@@ -2147,6 +2147,30 @@ function matchesSimplePatternForTest(relPath, base) {
   return matchesSimplePattern(relPath, base);
 }
 
+// src/services/evidence-collector.ts
+import { createHash } from "crypto";
+import { mkdir as mkdir2, writeFile } from "fs/promises";
+import { join as join4 } from "path";
+function hashGoal(goal) {
+  return createHash("sha256").update(goal, "utf-8").digest("hex");
+}
+async function writeEvidence(payload) {
+  const dir = join4(payload.workdir, "ming-evidence");
+  await mkdir2(dir, { recursive: true });
+  const id = `evidence-${Date.now()}`;
+  const card = {
+    id,
+    schemaVersion: 1,
+    /** 本次任务使用的验收协议版本（供未来协议演进时历史迁移） */
+    acceptanceProtocolVersion: ACCEPTANCE_PROTOCOL_VERSION,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    ...payload
+  };
+  const filepath = join4(dir, `${id}.json`);
+  await writeFile(filepath, JSON.stringify(card, null, 2), "utf-8");
+  return { path: filepath, id };
+}
+
 // src/services/next-steps.ts
 function nextStepsFor(outcome) {
   if (outcome.success) {
@@ -2347,28 +2371,6 @@ function collectWorkflowArtifacts(result) {
 
 // src/tools/ming-auto.ts
 import { defineTool } from "@deepseek-ai/dsh-tools";
-
-// src/services/evidence-collector.ts
-import { mkdir as mkdir2, writeFile } from "fs/promises";
-import { join as join4 } from "path";
-async function writeEvidence(payload) {
-  const dir = join4(payload.workdir, "ming-evidence");
-  await mkdir2(dir, { recursive: true });
-  const id = `evidence-${Date.now()}`;
-  const card = {
-    id,
-    schemaVersion: 1,
-    /** 本次任务使用的验收协议版本（供未来协议演进时历史迁移） */
-    acceptanceProtocolVersion: ACCEPTANCE_PROTOCOL_VERSION,
-    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    ...payload
-  };
-  const filepath = join4(dir, `${id}.json`);
-  await writeFile(filepath, JSON.stringify(card, null, 2), "utf-8");
-  return { path: filepath, id };
-}
-
-// src/tools/ming-auto.ts
 function formatMingResult(value) {
   const lines = [value.summary];
   if (value.recipe) {
@@ -2510,7 +2512,12 @@ ${dispatch.summary}
           outcome,
           workdir,
           recipe: plan.recipeId ? { id: plan.recipeId, name: plan.recipeName, matchedBy: plan.matchedBy, capabilities: plan.capabilities } : void 0,
-          verification
+          verification,
+          provenance: {
+            source: "auto",
+            goalHash: hashGoal(goal),
+            recipeId: plan.recipeId
+          }
         });
         evidencePath = evidence.path;
       } catch {
@@ -2574,7 +2581,12 @@ async function workflowToResult(wf, plan, goal, resources, workdir) {
       resources,
       outcome,
       workdir,
-      recipe: plan.recipeId ? { id: plan.recipeId, name: plan.recipeName, matchedBy: plan.matchedBy, capabilities: plan.capabilities } : void 0
+      recipe: plan.recipeId ? { id: plan.recipeId, name: plan.recipeName, matchedBy: plan.matchedBy, capabilities: plan.capabilities } : void 0,
+      provenance: {
+        source: "auto",
+        goalHash: hashGoal(goal),
+        recipeId: plan.recipeId
+      }
     });
     evidencePath = evidence.path;
   } catch {
@@ -2664,6 +2676,7 @@ export {
   verifyChecks,
   formatVerification,
   matchesSimplePatternForTest,
+  hashGoal,
   writeEvidence,
   nextStepsFor,
   workflowNextSteps,
