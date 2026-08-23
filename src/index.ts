@@ -50,6 +50,7 @@ export async function apply(ctx: Context): Promise<void> {
         '把用户的目标原样写进 goal 参数（一句话或一段话）；如有相关的文件路径或 URL，填进 resources。',
         'ming_auto 会把目标转交给一个全新的执行子代理，由它真正执行并产出真实文件；完成后按工具返回的产出文件路径向用户汇报。',
         '当用户想回顾之前做过什么、或要找回之前任务的产出时，调用 ming_history 工具查询历史记录。',
+        '当用户想了解「各方案验收通过率如何、质量稳不稳、月度真执行且验证通过的任务数（VTE）」时，调用 ming_acceptance 只读查询。',
         'Ming 内置若干「方案包」（如整理文件夹、生成 HTML 报表、搭建个人网站），会自动匹配并装配能力；想查看全部可用方案时可调用 ming_catalog。',
         '当方案或用户要求的能力本机未装配（如缺少文档解析、Office 处理、网站部署插件）时，先调用 ming_install（mode=search）到 1024Store 搜索替代插件，' +
           '把候选展示给用户选择（说明每个为什么与目标相关，不要替用户决定），用户选定后调用 ming_install（mode=install，plugin=选中的候选 name）执行安装；' +
@@ -61,7 +62,7 @@ export async function apply(ctx: Context): Promise<void> {
         '注意：如果你自身就是被 ming_auto 委派去执行具体子任务的子代理，不要再次调用本工具（你的工具列表里也不会出现它）。',
       ].join('\n'),
     })
-    ctx.logger.info('✅ ming_plan / ming_clarify / ming_auto / ming_catalog / ming_install / ming_store_search / ming_history 工具已注册')
+    ctx.logger.info('✅ ming_plan / ming_clarify / ming_auto / ming_catalog / ming_install / ming_store_search / ming_history / ming_acceptance 工具已注册')
     ctx.logger.info('💡 直接描述你想做的事，Ming 会帮你真正完成')
   } catch (error) {
     ctx.logger.error('❌ Ming Capability Pack 加载失败', error)
