@@ -26,7 +26,7 @@ Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真�
 2. 开始菜单搜索「PowerShell」打开，**复制这一条命令粘贴回车**（不需要加任何前缀）：
 
    ```powershell
-   [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.8.0.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
+   [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.9.0.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
    ```
 
    > 看到「Ming 已安装完成！」就成功了。如果下载慢，把上面 URL 里的 `registry.npmjs.org` 换成 `registry.npmmirror.com` 再跑一次（内容一样，国内镜像已同步）。
@@ -40,7 +40,7 @@ Ming 只做一件事：**把自然语言一键转交给 Harness 原生能力真�
    - 「把这周的数据做成一份周报」
    - 「把这段文字变成一张信息图」
 
-它会先问你选「先做个能看的版本」还是「先问你几个问题」，选完（或说“你看着办”）就帮你做完，
+它会先问你选「直接做一版完整的」还是「先问你几个问题」，选完（或说“你看着办”）就帮你做完，
 并告诉你文件在哪、怎么打开。脚本会自动定位 DSH Desktop、选用它自带的 pnpm 从国内镜像安装
 （不需要 GitHub、不需要系统 npm，绕开 npm 权限问题），安装完打印后续引导。
 想先看它会做什么，可在命令末尾加 `-DryRun`。
@@ -256,7 +256,7 @@ Ming 内置若干「方案包」：每个方案声明「触发场景 + 需要的
 
 | 策略 | 行为 | 中间件调用链 |
 | --- | --- | --- |
-| `mvp-first`（推荐） | 用方案声明的默认值直接做，先出能看的 MVP，看完再迭代 | resolve → assemble(默认值) → execute → verify → evidence |
+| `mvp-first`（推荐） | 用高标准的默认值直接做出一版「完整可展示」的成果，看完再打磨细节 | resolve → assemble(默认值) → execute → verify → evidence |
 | `clarify-first` | 用 `ming_clarify` 对话式核对：缺什么问什么，把用户的大白话翻译成系统逻辑，信息够了就做 | resolve → 多轮澄清(翻译) → assemble(带答案) → execute → verify → evidence |
 
 两条链都汇入 `ming_auto` 执行，区别只在装配上下文是否注入用户答案；
@@ -266,6 +266,18 @@ Ming 内置若干「方案包」：每个方案声明「触发场景 + 需要的
 用户说「我想展示摄影作品」→ 翻译成「作品集结构（首页 + 分类 + 详情）」；
 用户说「文艺一点」→ 翻译成「浅色背景 + 衬线字体 + 大图留白」。
 澄清过程中用户随时可以说「你看着办」——用默认值兜底，信息够了立刻开始做。
+
+### 质量门槛：第一轮就交付「拿得出手」的成果
+
+Ming 的价值不在「帮模型执行」（这层会被模型能力吞掉），而在**替用户定义「什么算好」**。
+每个方案声明 `qualityBar`——第一轮交付就要达到的质量标准，注入执行子代理的 prompt：
+
+- **交付标准**：一句话定位这一轮的水平（如「打开能直接展示的高质感网站，不是朴素占位版」）；
+- **质量检查**：具体可核对的要求（视觉主题 / 内容真实质感 / 交互动效 / 移动端适配）；
+- **交付前自查**：子代理执行完逐条自查，全部满足再汇报「完成」。
+
+所以第一轮交付的是「完整可展示版」而不是「先出个能看的再迭代」；
+后续用户反馈只做细节打磨，不用推翻重来。
 
 ## 递归防护
 
@@ -320,7 +332,7 @@ export MING_STORE_KEY=dsh_live_xxxx   # 可选；不配置则匿名请求
 | --- | --- |
 | `src/index.ts` | 插件入口，注册工具 + 注入 systemPrompt |
 | `src/capabilities/` | 能力织机：Recipe 方案目录、Resolver、Assembler、Verifier |
-| `src/capabilities/planner.ts` | 策略选择：先跑 MVP / 先对齐需求 + 澄清问题解析 |
+| `src/capabilities/planner.ts` | 策略选择：直接做一版完整的 / 先对齐需求 + 澄清问题解析 |
 | `src/capabilities/store.ts` | 1024Store 客户端（能力目录外部事实源，网络失败优雅降级） |
 | `src/capabilities/recommend.ts` | 推荐引擎：候选排序 + 「为什么配你」的理由 + 搜索词推导 |
 | `src/tools/ming-plan.ts` | `ming_plan` 工具：先给选择（匹配方案 + 策略选项 + 澄清问题） |

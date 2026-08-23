@@ -4,9 +4,10 @@
  * 产品交互：用户只说「想让什么变成真的」，Ming 不连环追问，
  * 而是先给「怎么做的选择」，让用户挑一个方向再往下走。
  * 不同策略对应不同的中间件调用链：
- *   - mvp-first（推荐）：用默认值直接跑出能看的 MVP，看完再迭代（快链）；
+ *   - mvp-first（推荐）：用高标准的默认值直接做出一版「完整可展示」的成果，看完再打磨细节（快链）；
  *   - clarify-first：先问方案声明的关键问题（只问必要的），按用户答案精确装配再跑（核对链）。
- * 两条链都汇入 ming_auto 执行，区别只在「装配上下文是否注入用户答案」。
+ * 两条链都汇入 ming_auto 执行，区别只在「装配上下文是否注入用户答案」；
+ * 第一轮交付标准由方案声明的 qualityBar 保证，两条链都生效。
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -37,8 +38,8 @@ export function resolveAnswers(
 export const STRATEGY_OPTIONS: StrategyOption[] = [
   {
     id: 'mvp-first',
-    label: '先跑一个能看的 MVP',
-    description: '不打断你，直接用合理默认值做出来，你看完再提修改',
+    label: '直接做一版完整的',
+    description: '不打断你，用高标准的默认值直接做出一版完整可展示的成果，做完你再打磨细节',
     recommended: true,
   },
   {

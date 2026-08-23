@@ -4,6 +4,7 @@ import {
   buildRecommendationReason,
   clarifyStatus,
   collectWorkflowArtifacts,
+  dispatchMissingCapabilities,
   execute,
   formatClarify,
   formatStoreResult,
@@ -21,10 +22,9 @@ import {
   resolveWorkdir,
   runWorkflow,
   searchStorePlugins,
-  suggestQueryFor,
   verifyChecks,
   workflowNextSteps
-} from "./chunk-4OGGVDGR.js";
+} from "./chunk-FE73CM7S.js";
 
 // src/tools/ming-auto.ts
 import { defineTool } from "@deepseek-ai/dsh-tools";
@@ -76,7 +76,7 @@ function registerMingAutoTool(ctx) {
 \u4EA4\u7ED9 Harness \u539F\u751F Agent \u771F\u6B63\u5B8C\u6210\uFF0C\u4EA7\u51FA\u771F\u5B9E\u6587\u4EF6\u5E76\u72EC\u7ACB\u9A8C\u8BC1\u3002
 
 \u9002\u5408\uFF1A\u751F\u6210\u7F51\u7AD9\u3001\u5904\u7406\u56FE\u7247/\u6570\u636E\u3001\u6574\u7406\u6587\u4EF6\u3001\u5199\u6587\u6863\u3001\u81EA\u52A8\u5316\u5DE5\u4F5C\u6D41\u7B49\u4EFB\u4F55\u53EF\u63CF\u8FF0\u7684\u4EFB\u52A1\u3002
-\u63D0\u793A\uFF1A\u5148\u8C03\u7528 ming_plan \u67E5\u770B\u7B56\u7565\u9009\u62E9\uFF08\u5148\u8DD1 MVP / \u5148\u5BF9\u9F50\u9700\u6C42\uFF09\uFF0C\u518D\u6309\u7528\u6237\u9009\u62E9\u628A strategy \u4F20\u8FDB\u6765\uFF1B
+\u63D0\u793A\uFF1A\u5148\u8C03\u7528 ming_plan \u67E5\u770B\u7B56\u7565\u9009\u62E9\uFF08\u76F4\u63A5\u505A\u4E00\u7248\u5B8C\u6574\u7684 / \u5148\u5BF9\u9F50\u9700\u6C42\uFF09\uFF0C\u518D\u6309\u7528\u6237\u9009\u62E9\u628A strategy \u4F20\u8FDB\u6765\uFF1B
 \u9009 clarify-first \u65F6\u5148\u7528 ming_clarify \u5BF9\u8BDD\u5F0F\u6838\u5BF9\uFF0C\u628A\u7FFB\u8BD1\u6210\u7CFB\u7EDF\u903B\u8F91\u7684\u7B54\u6848\u653E\u8FDB answers \u518D\u6267\u884C\u3002
 \u4E5F\u53EF\u76F4\u63A5\u6307\u5B9A recipe \u65B9\u6848 id\u3002`,
     parameters: {
@@ -132,26 +132,18 @@ function registerMingAutoTool(ctx) {
       const resources = args.resources ?? [];
       const workdir = resolveWorkdir(exec);
       const plan = await resolveCapabilities(ctx, { goal, recipeId: args.recipe });
+      let dispatchNotice = "";
+      let dispatchNextSteps = [];
       if (plan.recipeId && !plan.executable) {
-        const missing = plan.missingRequired.join("\u3001");
-        const missingCaps = plan.capabilities.filter((c) => !c.available);
-        const searchHints = missingCaps.map((c) => {
-          const q = suggestQueryFor(c.ref.purpose, c.ref.id);
-          const answersText = args.answers ? `\uFF0Canswers=${JSON.stringify(args.answers)}` : "";
-          return `\u8C03\u7528 ming_install\uFF08mode=search\uFF0Cquery=\u300C${q}\u300D\uFF0Cpurpose=\u300C${c.ref.purpose ?? ""}\u300D${answersText}\uFF09\u641C\u7D22\u300C${c.ref.purpose ?? c.ref.id}\u300D\u7684\u66FF\u4EE3\u63D2\u4EF6\uFF1B\u641C\u4E0D\u5230\u5C31\u6362\u66F4\u77ED\u7684\u5355\u4E2A\u5173\u952E\u8BCD\uFF08\u82F1\u6587\u5355\u8BCD\u6216\u5355\u4E2A\u4E2D\u6587\u8BCD\uFF0C\u5982 deploy / \u6587\u6863\uFF09\u518D\u8BD5\uFF0C\u4E0D\u8981\u7528\u957F\u53E5\u5B50`;
-        });
-        const result2 = {
-          success: false,
-          mode: "planned",
-          summary: `\u5DF2\u5339\u914D\u65B9\u6848\u300C${plan.recipeName}\u300D\uFF0C\u4F46\u7F3A\u5C11\u5FC5\u9009\u80FD\u529B\uFF08${missing}\uFF09\uFF0C\u672A\u6267\u884C\u3002\u5148\u8C03\u7528 ming_install \u641C\u7D22\u66FF\u4EE3\u63D2\u4EF6\uFF0C\u628A\u5019\u9009\uFF08\u6309\u4F60\u7684\u9700\u6C42\u6392\u597D\u5E8F\u7684\uFF09\u5C55\u793A\u7ED9\u7528\u6237\u9009\u5B9A\u540E\u5B89\u88C5\uFF0C\u91CD\u542F DSH \u518D\u91CD\u8DD1\u76EE\u6807\uFF1B\u6216\u76F4\u63A5\u7528\u81EA\u7136\u8BED\u8A00\u63CF\u8FF0\u76EE\u6807\u8BA9\u6211\u7528\u73B0\u6709\u5DE5\u5177\u5C3D\u529B\u5B8C\u6210\u3002`,
-          artifacts: [],
-          evidence: "",
-          nextSteps: searchHints.length > 0 ? searchHints : plan.capabilities.filter((c) => !c.available).map((c) => `\u88C5\u914D ${c.ref.kind}:${c.ref.id}`),
-          recipe: plan.recipeName ?? "",
-          planSummary: buildPlanSummary(plan),
-          verificationSummary: ""
-        };
-        return result2;
+        const missingRefs = plan.capabilities.filter((c) => !c.available && !c.ref.optional).map((c) => c.ref);
+        const dispatch = await dispatchMissingCapabilities(missingRefs);
+        if (dispatch.entries.length > 0) {
+          dispatchNotice = `\u65B9\u6848\u300C${plan.recipeName}\u300D\u7F3A ${missingRefs.length} \u4E2A\u80FD\u529B\uFF0C\u4E2D\u95F4\u4EF6\u5DF2\u81EA\u52A8\u88C5\u914D\uFF1A
+${dispatch.summary}
+
+\u672C\u6B21\u5148\u7528\u73B0\u6709\u5DE5\u5177\u4EA4\u4ED8\u7B2C\u4E00\u7248\uFF0C\u88C5\u597D\u7684\u5DE5\u5177\u91CD\u542F DSH \u540E\u5BF9\u540E\u7EED\u8FED\u4EE3\u751F\u6548\u3002`;
+          dispatchNextSteps = dispatch.entries.filter((e) => e.action === "proposed" && e.command).map((e) => `\u56DE\u300C\u786E\u8BA4\u300D\u5E2E\u4F60\u88C5 ${e.source}\uFF08${e.reason}\uFF09`);
+        }
       }
       const answers = resolveAnswers(plan, args.strategy, args.answers);
       const contextual = assembleContext(plan, answers);
@@ -160,7 +152,7 @@ function registerMingAutoTool(ctx) {
           workflowFrom: args.workflowFrom,
           baseContext: contextual
         });
-        return workflowToResult(wfResult, plan, goal, resources, workdir, answers);
+        return workflowToResult(wfResult, plan, goal, resources, workdir);
       }
       const outcome = await execute(ctx, goal, resources, exec, { contextual });
       let verificationSummary = "";
@@ -186,10 +178,10 @@ function registerMingAutoTool(ctx) {
       const result = {
         success: outcome.success,
         mode: outcome.mode,
-        summary: appendMissingNotice(outcome),
+        summary: [dispatchNotice, appendMissingNotice(outcome)].filter(Boolean).join("\n\n"),
         artifacts: outcome.artifacts,
         evidence: evidencePath,
-        nextSteps: nextStepsFor(outcome),
+        nextSteps: [...dispatchNextSteps, ...nextStepsFor(outcome)],
         recipe: plan.recipeName ?? "",
         planSummary: buildPlanSummary(plan),
         verificationSummary
@@ -214,7 +206,7 @@ function buildPlanSummary(plan) {
   }
   return parts.join("\uFF1B");
 }
-async function workflowToResult(wf, plan, goal, resources, workdir, answers) {
+async function workflowToResult(wf, plan, goal, resources, workdir) {
   const failedOutcome = wf.stepResults.find((r) => r.step.id === wf.failedStepId)?.outcome;
   const outcome = {
     mode: "executed",
@@ -239,10 +231,10 @@ async function workflowToResult(wf, plan, goal, resources, workdir, answers) {
   return {
     success: wf.success,
     mode: "executed",
-    summary: wf.success ? appendMissingNotice(outcome) : `\u5DE5\u4F5C\u6D41\u5728\u300C${wf.stepResults.find((r) => r.step.id === wf.failedStepId)?.step.name ?? "\u67D0\u4E00\u6B65"}\u300D\u505C\u4E0B\uFF1A${wf.summary}`,
+    summary: wf.stoppedAt ? wf.summary : wf.success ? appendMissingNotice(outcome) : `\u5DE5\u4F5C\u6D41\u5728\u300C${wf.stepResults.find((r) => r.step.id === wf.failedStepId)?.step.name ?? "\u67D0\u4E00\u6B65"}\u300D\u505C\u4E0B\uFF1A${wf.summary}`,
     artifacts: outcome.artifacts,
     evidence: evidencePath,
-    nextSteps: workflowNextSteps(wf, answers),
+    nextSteps: workflowNextSteps(wf),
     recipe: plan.recipeName ?? "",
     planSummary: buildPlanSummary(plan),
     verificationSummary: workflowVerificationSummary(wf)
@@ -796,7 +788,7 @@ function formatPlan(ep) {
 function registerMingPlanTool(ctx) {
   ctx.tools.register(defineTool6({
     name: "ming_plan",
-    description: "Ming \u89C4\u5212\uFF1A\u7528\u6237\u521A\u63D0\u51FA\u4E00\u4E2A\u76EE\u6807\u65F6\uFF0C\u5148\u8C03\u7528\u672C\u5DE5\u5177\u89C4\u5212\u6267\u884C\u65B9\u5F0F\u2014\u2014\u8FD4\u56DE\u5339\u914D\u7684\u65B9\u6848\u3001\u4E24\u4E2A\u7B56\u7565\u9009\u9879\uFF08\u5148\u8DD1 MVP / \u5148\u5BF9\u9F50\u9700\u6C42\uFF09\u4E0E\u9700\u8981\u786E\u8BA4\u7684\u5173\u952E\u95EE\u9898\u3002\u628A\u9009\u9879\u5448\u73B0\u7ED9\u7528\u6237\u9009\u5B9A\u540E\uFF0C\u518D\u8C03\u7528 ming_auto\uFF08\u5E26\u4E0A strategy\uFF0C\u5FC5\u8981\u65F6\u5E26 answers\uFF09\u771F\u6B63\u6267\u884C\u3002\u672C\u5DE5\u5177\u53EA\u89C4\u5212\u4E0D\u6267\u884C\u3002",
+    description: "Ming \u89C4\u5212\uFF1A\u7528\u6237\u521A\u63D0\u51FA\u4E00\u4E2A\u76EE\u6807\u65F6\uFF0C\u5148\u8C03\u7528\u672C\u5DE5\u5177\u89C4\u5212\u6267\u884C\u65B9\u5F0F\u2014\u2014\u8FD4\u56DE\u5339\u914D\u7684\u65B9\u6848\u3001\u4E24\u4E2A\u7B56\u7565\u9009\u9879\uFF08\u76F4\u63A5\u505A\u4E00\u7248\u5B8C\u6574\u7684 / \u5148\u5BF9\u9F50\u9700\u6C42\uFF09\u4E0E\u9700\u8981\u786E\u8BA4\u7684\u5173\u952E\u95EE\u9898\u3002\u628A\u9009\u9879\u5448\u73B0\u7ED9\u7528\u6237\u9009\u5B9A\u540E\uFF0C\u518D\u8C03\u7528 ming_auto\uFF08\u5E26\u4E0A strategy\uFF0C\u5FC5\u8981\u65F6\u5E26 answers\uFF09\u771F\u6B63\u6267\u884C\u3002\u672C\u5DE5\u5177\u53EA\u89C4\u5212\u4E0D\u6267\u884C\u3002",
     parameters: {
       goal: {
         type: "string",
@@ -870,7 +862,7 @@ function registerMingStoreTool(ctx) {
 
 // src/index.ts
 var name = "@mingworkbench/capability-pack";
-var version = "0.8.0";
+var version = "0.9.0";
 var inject = ["tools", "systemPrompt"];
 async function apply(ctx) {
   ctx.logger.info("\u{1F680} Ming Capability Pack \u6B63\u5728\u52A0\u8F7D...");
@@ -886,7 +878,7 @@ async function apply(ctx) {
       name: "tool:ming_auto",
       order: 110,
       text: [
-        "\u5F53\u7528\u6237\u7528\u81EA\u7136\u8BED\u8A00\u63CF\u8FF0\u300C\u60F3\u5B8C\u6210\u7684\u4E8B\u60C5\u300D\u65F6\uFF0C\u5148\u8C03\u7528 ming_plan \u89C4\u5212\u6267\u884C\u65B9\u5F0F\uFF08\u5339\u914D\u65B9\u6848 + \u7B56\u7565\u9009\u62E9\uFF1A\u5148\u8DD1 MVP / \u5148\u5BF9\u9F50\u9700\u6C42\uFF09\uFF0C",
+        "\u5F53\u7528\u6237\u7528\u81EA\u7136\u8BED\u8A00\u63CF\u8FF0\u300C\u60F3\u5B8C\u6210\u7684\u4E8B\u60C5\u300D\u65F6\uFF0C\u5148\u8C03\u7528 ming_plan \u89C4\u5212\u6267\u884C\u65B9\u5F0F\uFF08\u5339\u914D\u65B9\u6848 + \u7B56\u7565\u9009\u62E9\uFF1A\u76F4\u63A5\u505A\u4E00\u7248\u5B8C\u6574\u7684 / \u5148\u5BF9\u9F50\u9700\u6C42\uFF09\uFF0C",
         "\u628A\u9009\u9879\u5448\u73B0\u7ED9\u7528\u6237\u9009\u5B9A\u540E\uFF0C\u518D\u8C03\u7528 ming_auto \u771F\u6B63\u5B8C\u6210\u5B83\uFF08\u5E26\u4E0A\u7528\u6237\u9009\u62E9\u7684 strategy\uFF0C\u5FC5\u8981\u65F6\u5E26\u4E0A\u786E\u8BA4\u7684 answers\uFF09\u3002",
         "\u5982\u679C\u7528\u6237\u9009\u300C\u5148\u5BF9\u9F50\u9700\u6C42\u518D\u505A\u300D\uFF08clarify-first\uFF09\uFF1A\u7528 ming_clarify \u505A\u5BF9\u8BDD\u5F0F\u6838\u5BF9\u2014\u2014",
         "\u4E00\u6B21\u53EA\u95EE\u4E00\u4E2A\u6700\u5173\u952E\u7684\u95EE\u9898\u3001\u7ED9\u9009\u9879\u8BA9\u7528\u6237\u6311\uFF0C\u628A\u7528\u6237\u7684\u5927\u767D\u8BDD\u7FFB\u8BD1\u6210\u7CFB\u7EDF\u903B\u8F91\u7B54\u6848\uFF08\u5982\u300C\u6587\u827A\u70B9\u300D\u2192 \u6D45\u8272\u80CC\u666F+\u886C\u7EBF\u5B57\u4F53+\u5927\u56FE\u7559\u767D\uFF09\uFF0C",

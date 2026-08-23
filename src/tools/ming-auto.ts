@@ -11,8 +11,8 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { assembleContext } from '../capabilities/assembler.js'
+import { dispatchMissingCapabilities } from '../capabilities/dispatch.js'
 import { resolveAnswers } from '../capabilities/planner.js'
-import { suggestQueryFor } from '../capabilities/recommend.js'
 import { resolveCapabilities } from '../capabilities/resolver.js'
 import { formatVerification, verifyChecks } from '../capabilities/verifier.js'
 import type { CapabilityPlan } from '../capabilities/types.js'
@@ -58,7 +58,7 @@ export function registerMingAutoTool(ctx: Context): void {
 交给 Harness 原生 Agent 真正完成，产出真实文件并独立验证。
 
 适合：生成网站、处理图片/数据、整理文件、写文档、自动化工作流等任何可描述的任务。
-提示：先调用 ming_plan 查看策略选择（先跑 MVP / 先对齐需求），再按用户选择把 strategy 传进来；
+提示：先调用 ming_plan 查看策略选择（直接做一版完整的 / 先对齐需求），再按用户选择把 strategy 传进来；
 选 clarify-first 时先用 ming_clarify 对话式核对，把翻译成系统逻辑的答案放进 answers 再执行。
 也可直接指定 recipe 方案 id。`,
 
@@ -130,31 +130,19 @@ export function registerMingAutoTool(ctx: Context): void {
       // ① 能力解析：目标 → 装配计划
       const plan = await resolveCapabilities(ctx, { goal, recipeId: args.recipe })
 
-      // 命中了方案但必选能力缺失：诚实失败，引导走装配闭环（ming_install）
+      // 命中了方案但必选能力缺失：中间件自动去装配（curated 优先 → 市场兜底 → 可信源自动装/社区源一句确认），
+      // 但不阻断第一版交付——先用现有工具完成，装好的工具重启 DSH 后对后续迭代生效
+      let dispatchNotice = ''
+      let dispatchNextSteps: string[] = []
       if (plan.recipeId && !plan.executable) {
-        const missing = plan.missingRequired.join('、')
-        const missingCaps = plan.capabilities.filter(c => !c.available)
-        // 从缺口推导搜索词 + 把用户已确认方向带进推荐，让候选「配用户」而非「按星标堆」
-        const searchHints = missingCaps.map(c => {
-          const q = suggestQueryFor(c.ref.purpose, c.ref.id)
-          const answersText = args.answers ? `，answers=${JSON.stringify(args.answers)}` : ''
-          return `调用 ming_install（mode=search，query=「${q}」，purpose=「${c.ref.purpose ?? ''}」${answersText}）搜索「${c.ref.purpose ?? c.ref.id}」的替代插件；` +
-            `搜不到就换更短的单个关键词（英文单词或单个中文词，如 deploy / 文档）再试，不要用长句子`
-        })
-        const result: MingResult = {
-          success: false,
-          mode: 'planned',
-          summary: `已匹配方案「${plan.recipeName}」，但缺少必选能力（${missing}），未执行。` +
-            `先调用 ming_install 搜索替代插件，把候选（按你的需求排好序的）展示给用户选定后安装，重启 DSH 再重跑目标；` +
-            `或直接用自然语言描述目标让我用现有工具尽力完成。`,
-          artifacts: [],
-          evidence: '',
-          nextSteps: searchHints.length > 0 ? searchHints : plan.capabilities.filter(c => !c.available).map(c => `装配 ${c.ref.kind}:${c.ref.id}`),
-          recipe: plan.recipeName ?? '',
-          planSummary: buildPlanSummary(plan),
-          verificationSummary: '',
+        const missingRefs = plan.capabilities.filter(c => !c.available && !c.ref.optional).map(c => c.ref)
+        const dispatch = await dispatchMissingCapabilities(missingRefs)
+        if (dispatch.entries.length > 0) {
+          dispatchNotice = `方案「${plan.recipeName}」缺 ${missingRefs.length} 个能力，中间件已自动装配：\n${dispatch.summary}\n\n本次先用现有工具交付第一版，装好的工具重启 DSH 后对后续迭代生效。`
+          dispatchNextSteps = dispatch.entries
+            .filter(e => e.action === 'proposed' && e.command)
+            .map(e => `回「确认」帮你装 ${e.source}（${e.reason}）`)
         }
-        return result
       }
 
       // ② 装配：把方案要求 + 用户确认的方向注入执行上下文
@@ -167,7 +155,7 @@ export function registerMingAutoTool(ctx: Context): void {
           workflowFrom: args.workflowFrom,
           baseContext: contextual,
         })
-        return workflowToResult(wfResult, plan, goal, resources, workdir, answers)
+        return workflowToResult(wfResult, plan, goal, resources, workdir)
       }
 
       // ③ 官方子代理执行（未命中方案时 contextual 为空，行为与旧版一致）
@@ -203,10 +191,10 @@ export function registerMingAutoTool(ctx: Context): void {
       const result: MingResult = {
         success: outcome.success,
         mode: outcome.mode,
-        summary: appendMissingNotice(outcome),
+        summary: [dispatchNotice, appendMissingNotice(outcome)].filter(Boolean).join('\n\n'),
         artifacts: outcome.artifacts,
         evidence: evidencePath,
-        nextSteps: nextStepsFor(outcome),
+        nextSteps: [...dispatchNextSteps, ...nextStepsFor(outcome)],
         recipe: plan.recipeName ?? '',
         planSummary: buildPlanSummary(plan),
         verificationSummary,
@@ -234,14 +222,14 @@ function buildPlanSummary(plan: CapabilityPlan): string {
   return parts.join('；')
 }
 
-/** 多步工作流 → MingResult：失败时明确「哪一步 + 坑位修法」，成功时汇总步骤与证据 */
+/** 多步工作流 → MingResult：失败时明确「哪一步 + 坑位修法」，成功时汇总步骤与证据；
+ *  下一步建议由 workflowNextSteps 按暂停/缺能力/失败/成功分类给出，不再传 answers（已无用） */
 async function workflowToResult(
   wf: WorkflowResult,
   plan: CapabilityPlan,
   goal: string,
   resources: string[],
   workdir: string,
-  answers?: Record<string, string>,
 ): Promise<MingResult> {
   const failedOutcome = wf.stepResults.find(r => r.step.id === wf.failedStepId)?.outcome
   const outcome: ExecutionOutcome = {
@@ -270,12 +258,14 @@ async function workflowToResult(
   return {
     success: wf.success,
     mode: 'executed',
-    summary: wf.success
-      ? appendMissingNotice(outcome)
-      : `工作流在「${wf.stepResults.find(r => r.step.id === wf.failedStepId)?.step.name ?? '某一步'}」停下：${wf.summary}`,
+    summary: wf.stoppedAt
+      ? wf.summary
+      : wf.success
+        ? appendMissingNotice(outcome)
+        : `工作流在「${wf.stepResults.find(r => r.step.id === wf.failedStepId)?.step.name ?? '某一步'}」停下：${wf.summary}`,
     artifacts: outcome.artifacts,
     evidence: evidencePath,
-    nextSteps: workflowNextSteps(wf, answers),
+    nextSteps: workflowNextSteps(wf),
     recipe: plan.recipeName ?? '',
     planSummary: buildPlanSummary(plan),
     verificationSummary: workflowVerificationSummary(wf),

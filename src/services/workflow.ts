@@ -11,6 +11,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { probeCapabilities } from '../capabilities/resolver.js'
+import { dispatchMissingCapabilities, type DispatchOptions } from '../capabilities/dispatch.js'
 import { formatVerification, verifyChecks } from '../capabilities/verifier.js'
 import type { CapabilityAvailability, Pitfall, WorkflowStep, VerificationSummary } from '../capabilities/types.js'
 import { execute } from './executor.js'
@@ -28,7 +29,7 @@ export interface WorkflowStepResult {
   blockedBy?: CapabilityAvailability
 }
 
-export type WorkflowFailureKind = 'step-failed' | 'verification-failed' | 'capability-missing'
+export type WorkflowFailureKind = 'step-failed' | 'verification-failed' | 'capability-missing' | 'invalid-workflow-from'
 
 export interface WorkflowResult {
   success: boolean
@@ -36,6 +37,10 @@ export interface WorkflowResult {
   /** 失败步 id（成功时为空） */
   failedStepId?: string
   failureKind?: WorkflowFailureKind
+  /** 暂停步 id（stopAfter 步骤验收通过后暂停，等待用户确认/选择；成功且未暂停时为空） */
+  stoppedAt?: string
+  /** 暂停后应从哪一步继续（stopAfter 的下一步；由 runWorkflow 算出，供「继续」指引直接使用） */
+  resumeFrom?: string
   /** 失败步的坑位（用户「搞半天搞不定」的那些原因的修法） */
   pitfalls?: Pitfall[]
   summary: string
@@ -47,6 +52,8 @@ export interface RunWorkflowOptions {
   workflowFrom?: string
   /** 装配上下文（方案要求 + 用户确认的方向），注入每个步骤的子代理 prompt */
   baseContext?: string[]
+  /** 覆盖工具调度（测试/网络隔离） */
+  dispatch?: DispatchOptions
 }
 
 /** 组装给子代理的本步目标：原始目标 + 本步目标 + 上下文说明 */
@@ -74,9 +81,23 @@ export async function runWorkflow(
   const startedAt = Date.now()
   const stepResults: WorkflowStepResult[] = []
   const fromId = options.workflowFrom
+  // 续跑点必须是真实存在的步骤；传错（如把「继续」两个字当 id）就明确报错，
+  // 绝不静默把所有步骤标 skipped 然后假装「工作流完成」——那是对用户的假话。
+  if (fromId && !steps.some(s => s.id === fromId)) {
+    return {
+      success: false,
+      failedStepId: fromId,
+      failureKind: 'invalid-workflow-from',
+      stepResults: [],
+      pitfalls: [],
+      summary: `无法从「${fromId}」续跑：工作流里没有这一步。想继续的话，直接对 Ming 说「继续」两个字即可，会从你停下的下一步接着做。`,
+      durationMs: Date.now() - startedAt,
+    }
+  }
   let reachedFrom = !fromId
 
-  for (const step of steps) {
+  for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
+    const step = steps[stepIdx]
     // workflowFrom 之前的步骤标记跳过
     if (!reachedFrom) {
       if (step.id === fromId) {
@@ -87,19 +108,32 @@ export async function runWorkflow(
       }
     }
 
-    // 本步能力探测：缺必选能力就不白跑，停在本步引导装配
+    // 本步能力探测：缺必选能力时不白跑——先让中间件自动找最好的工具装配，再停在本步等用户确认/重启
     if (step.capabilities && step.capabilities.length > 0) {
       const caps = await probeCapabilities(ctx, step.capabilities)
       const missing = caps.find(c => !c.available && !c.ref.optional)
       if (missing) {
+        const missingRefs = caps.filter(c => !c.available && !c.ref.optional).map(c => c.ref)
+        const dispatch = await dispatchMissingCapabilities(missingRefs, options.dispatch)
         stepResults.push({ step, skipped: false, blockedBy: missing })
+        // 如实区分「官方能力已自动装好」与「社区插件待你一句确认」，绝不把「建议装」说成「已装好」
+        const verb = dispatch.installedCount > 0 ? '已自动安装官方能力' : '已去市场找到最佳工具'
+        const followup = dispatch.installedCount > 0
+          ? '装好后完全重启 DSH，再对 Ming 说一声「继续」，就会从这一步接着做（前面的已完成步骤不会重跑）。'
+          : '需要你回一句「确认」我才会帮你装；装好并完全重启 DSH 后，再说「继续」从这一步接着做。'
+        const summaryLines = [
+          `步骤「${step.name}」需要能力「${missing.ref.kind}:${missing.ref.id}」（${missing.ref.purpose ?? ''}），中间件${verb}：`,
+          dispatch.summary,
+          '',
+          followup,
+        ]
         return {
           success: false,
           failedStepId: step.id,
           failureKind: 'capability-missing',
           stepResults,
           pitfalls: step.pitfalls,
-          summary: `步骤「${step.name}」需要能力「${missing.ref.kind}:${missing.ref.id}」（${missing.ref.purpose ?? ''}）但本机未装配，未执行。请先装配该能力。`,
+          summary: summaryLines.join('\n'),
           durationMs: Date.now() - startedAt,
         }
       }
@@ -143,6 +177,18 @@ export async function runWorkflow(
     }
 
     stepResults.push({ step, outcome, verification, skipped: false })
+
+    // stopAfter：本步验收通过后暂停，等用户确认/选择（用 workflowFrom 从下一步继续）
+    if (step.stopAfter) {
+      return {
+        success: true,
+        stoppedAt: step.id,
+        resumeFrom: steps[stepIdx + 1]?.id,
+        stepResults,
+        summary: `已完成「${step.name}」，在这里等你确认/选择，然后对 Ming 说一声「继续」，就接着做下一步。`,
+        durationMs: Date.now() - startedAt,
+      }
+    }
   }
 
   const skippedCount = stepResults.filter(r => r.skipped).length

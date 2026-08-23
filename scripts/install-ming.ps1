@@ -3,7 +3,7 @@
 
   给完全不懂技术的新人：复制一条命令，自动完成安装。
   主命令（npm 官方源，Windows PowerShell 5.1 兼容，无需访问 GitHub）：
-    [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.8.0.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
+    [Console]::OutputEncoding=[Text.Encoding]::UTF8;$t=$env:TEMP+'\ming.tgz';irm 'https://registry.npmjs.org/@mingworkbench/capability-pack/-/capability-pack-0.9.0.tgz' -OutFile $t;$s=(tar -xzOf $t 'package/scripts/install-ming.ps1') -join [char]10;$s=$s.TrimStart([char]0xFEFF);iex $s
 
   下载慢就换国内镜像：把 URL 里的 registry.npmjs.org 换成 registry.npmmirror.com。
   能访问 GitHub 也可以用：irm 'https://raw.githubusercontent.com/YuemingHub/Ming-Capability-Pack/main/scripts/install-ming.ps1'。

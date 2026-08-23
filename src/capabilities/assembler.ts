@@ -25,6 +25,15 @@ export function assembleContext(plan: CapabilityPlan, answers?: Record<string, s
     lines.push(`【本次装配方案】${plan.recipeName}（命中方式：${plan.matchedBy}）`)
   }
 
+  // 质量门槛放在执行要求之前：第一轮交付标准先于「怎么做」，决定产出预期
+  if (plan.qualityBar) {
+    lines.push('【第一轮交付标准】这一轮就要交付接近最终效果的高质量成果，不是「先出个简单的再迭代」：')
+    lines.push(`- ${plan.qualityBar.bar}`)
+    for (const c of plan.qualityBar.checks) lines.push(`- ${c}`)
+    lines.push('【交付前自查】逐条自查，全部满足后再汇报「完成」：')
+    for (const s of plan.qualityBar.selfCheck) lines.push(`- ${s}`)
+  }
+
   const confirmed = answers && Object.keys(answers).length > 0
   if (confirmed) {
     lines.push('【用户已确认的方向】')

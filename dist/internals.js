@@ -1,4 +1,5 @@
 import {
+  CURATED_CAPABILITIES,
   RECIPES,
   STRATEGY_OPTIONS,
   appendMissingNotice,
@@ -9,6 +10,7 @@ import {
   checkInstalled,
   clarifyStatus,
   collectWorkflowArtifacts,
+  dispatchMissingCapabilities,
   dshBinCandidates,
   extractArtifacts,
   findRecipesByGoal,
@@ -36,14 +38,16 @@ import {
   resolveWorkdir,
   runDshInstall,
   runWorkflow,
+  searchMarketplacePlugins,
   searchStorePlugins,
   stopReasonText,
   suggestQueryFor,
   tokensOf,
   verifyChecks,
   workflowNextSteps
-} from "./chunk-4OGGVDGR.js";
+} from "./chunk-FE73CM7S.js";
 export {
+  CURATED_CAPABILITIES,
   RECIPES,
   STRATEGY_OPTIONS,
   appendMissingNotice,
@@ -54,6 +58,7 @@ export {
   checkInstalled,
   clarifyStatus,
   collectWorkflowArtifacts,
+  dispatchMissingCapabilities,
   dshBinCandidates,
   extractArtifacts,
   findRecipesByGoal,
@@ -81,6 +86,7 @@ export {
   resolveWorkdir,
   runDshInstall,
   runWorkflow,
+  searchMarketplacePlugins,
   searchStorePlugins,
   stopReasonText,
   suggestQueryFor,

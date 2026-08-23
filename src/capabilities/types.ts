@@ -29,7 +29,25 @@ export interface CapabilityRef {
 export type VerificationCheck =
   | { kind: 'file_exists'; pattern: string; note?: string }
   | { kind: 'content_match'; pattern: string; contains: string; note?: string }
+  | { kind: 'content_absent'; pattern: string; mustNotContain: string; note?: string }
   | { kind: 'dir_nonempty'; pattern: string; note?: string }
+
+/**
+ * 质量门槛：Ming 替用户定义「什么算好」。
+ *
+ * 模型变强后「怎么做到」越来越便宜，产品的价值上移到「做到什么、什么算好」。
+ * qualityBar 就是每个领域的「好」：第一轮交付就要达到，不是「先出个简单的再迭代」。
+ * 与 verification（硬验收：文件存在/内容匹配）不同，qualityBar 是主观质量标准，
+ * 靠子代理执行时对照自查，产出「拿得出手」而非「能跑就行」。
+ */
+export interface QualityBar {
+  /** 一句话定位：第一轮交付是什么水平（注入子代理 prompt，直接决定产出预期） */
+  bar: string
+  /** 具体可检查的质量要求（视觉/内容/交互/适配等，逐条注入） */
+  checks: string[]
+  /** 交付前必须自查的清单（子代理执行完逐条自查，全过再汇报完成） */
+  selfCheck: string[]
+}
 
 /** 工作流某一步常见的坑：用户「搞半天搞不定」的那些原因 + 修法 */
 export interface Pitfall {
@@ -53,6 +71,12 @@ export interface WorkflowStep {
   verification?: VerificationCheck[]
   /** 本步常见坑与修法（失败时给用户的具体提示） */
   pitfalls?: Pitfall[]
+  /**
+   * 本步验收通过后暂停工作流，等待用户确认/选择后再继续。
+   * 用于「动用户代码前先交底」「迷茫时给出建议清单等用户选」这类产品决策确认点；
+   * 用户对 Ming 说「继续」后，以 workflowFrom=本步 id 从下一步接着做。
+   */
+  stopAfter?: boolean
 }
 
 /** 执行前需要向用户澄清的关键问题（只问必要的，其余用默认值） */
@@ -97,6 +121,8 @@ export interface Recipe {
   workflow?: WorkflowStep[]
   /** 执行前可能需要澄清的关键问题（默认值兜底；策略 mvp-first 时跳过） */
   questions?: ClarifyQuestion[]
+  /** 第一轮交付的质量门槛（Ming 替用户定义「什么算好」，注入子代理 prompt） */
+  qualityBar?: QualityBar
 }
 
 /** 能力可用性探测结果 */
@@ -128,6 +154,8 @@ export interface CapabilityPlan {
   workflow?: WorkflowStep[]
   /** 方案声明的澄清问题（供 clarify-first 策略用；未命中方案为空） */
   questions?: ClarifyQuestion[]
+  /** 方案声明的第一轮交付质量门槛（未命中方案为 undefined） */
+  qualityBar?: QualityBar
 }
 
 /** 单个断言结果 */

@@ -15,7 +15,7 @@ import { registerMingPlanTool } from './tools/ming-plan.js'
 import { registerMingStoreTool } from './tools/ming-store.js'
 
 export const name = '@mingworkbench/capability-pack'
-export const version = '0.8.0'
+export const version = '0.9.0'
 
 /**
  * 硬依赖：tools（注册工具）+ systemPrompt（注入「何时用 ming_auto」提示）。
@@ -38,7 +38,7 @@ export async function apply(ctx: Context): Promise<void> {
       name: 'tool:ming_auto',
       order: 110,
       text: [
-        '当用户用自然语言描述「想完成的事情」时，先调用 ming_plan 规划执行方式（匹配方案 + 策略选择：先跑 MVP / 先对齐需求），',
+        '当用户用自然语言描述「想完成的事情」时，先调用 ming_plan 规划执行方式（匹配方案 + 策略选择：直接做一版完整的 / 先对齐需求），',
         '把选项呈现给用户选定后，再调用 ming_auto 真正完成它（带上用户选择的 strategy，必要时带上确认的 answers）。',
         '如果用户选「先对齐需求再做」（clarify-first）：用 ming_clarify 做对话式核对——',
         '一次只问一个最关键的问题、给选项让用户挑，把用户的大白话翻译成系统逻辑答案（如「文艺点」→ 浅色背景+衬线字体+大图留白），',

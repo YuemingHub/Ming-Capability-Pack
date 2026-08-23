@@ -8,6 +8,7 @@ import {
   findRecipesByGoal,
   getRecipe,
   recipeCatalog,
+  RECIPES,
   resolveCapabilities,
   planExecution,
   clarifyStatus,
@@ -217,6 +218,57 @@ test('findRecipesByGoal 未命中返回空', () => {
   assert.deepEqual(findRecipesByGoal('帮我写一首关于秋天的诗'), [])
 })
 
+test('findRecipesByGoal 命中大型复杂项目方案', () => {
+  assert.ok(findRecipesByGoal('帮我做一个记账系统').some(f => f.recipe.id === 'big-project'))
+  assert.ok(findRecipesByGoal('开发一个大型项目').some(f => f.recipe.id === 'big-project'))
+  assert.ok(findRecipesByGoal('做个爬虫工具，自动抓取数据').some(f => f.recipe.id === 'big-project'))
+})
+
+test('findRecipesByGoal 存量项目也命中 big-project（修 bug/加功能/迷茫）', () => {
+  assert.ok(findRecipesByGoal('我的项目里有个 bug，帮我修一下').some(f => f.recipe.id === 'big-project'))
+  assert.ok(findRecipesByGoal('给我这个项目加个导出功能').some(f => f.recipe.id === 'big-project'))
+  assert.ok(findRecipesByGoal('我接手了一个项目，看不懂，不知道下一步做什么').some(f => f.recipe.id === 'big-project'))
+})
+
+test('resolveCapabilities 分流：纯「做网站」归 personal-site，复杂/存量信号归 big-project', async () => {
+  // 纯展示网站：personal-site 命中，big-project 不抢
+  const simple = await resolveCapabilities(mockCtx(), { goal: '帮我做个网站展示我的作品' })
+  assert.equal(simple.recipeId, 'personal-site')
+
+  // 「带后台」这类复杂信号：加权让 big-project 接住，不被「做网站」通用词淹掉
+  const withBackend = await resolveCapabilities(mockCtx(), { goal: '做一个带后台管理的网站，能注册登录' })
+  assert.equal(withBackend.recipeId, 'big-project')
+
+  // 系统/应用类：直接归 big-project
+  const system = await resolveCapabilities(mockCtx(), { goal: '帮我做一个记账系统' })
+  assert.equal(system.recipeId, 'big-project')
+
+  // 存量项目（修 bug/加功能/迷茫）：归 big-project
+  const fixBug = await resolveCapabilities(mockCtx(), { goal: '我的项目里有个 bug，帮我修一下' })
+  assert.equal(fixBug.recipeId, 'big-project')
+  const lost = await resolveCapabilities(mockCtx(), { goal: '我接手了一个项目，看不懂，不知道下一步做什么' })
+  assert.equal(lost.recipeId, 'big-project')
+})
+
+test('big-project 方案：现状探测分流 + 暂停确认 + 发布步能力 + 质量门槛', () => {
+  const r = getRecipe('big-project')
+  assert.ok(r)
+  // 大型项目没法一次做完：先探测现状（从 0 / 存量），再动手、验证、交付
+  assert.ok(r.workflow.length >= 4)
+  assert.ok(r.workflow.some(s => s.id === 'orient' && s.stopAfter)) // 动代码前先交底/迷茫给建议，等用户点头
+  assert.ok(r.workflow.some(s => s.id === 'build'))
+  assert.ok(r.workflow.some(s => s.id === 'verify'))
+  // 发布步声明能力，缺失由中间件自动装配（dispatch）
+  const deliver = r.workflow.find(s => s.id === 'deliver')
+  assert.ok(deliver.capabilities.some(c => c.id === 'publish_deploy'))
+  // 澄清问题都带翻译提示（用户大白话 → 系统逻辑）
+  assert.ok(r.questions.every(q => q.translate))
+  // 质量门槛：从 0 可运行、存量先看懂再改、不弄坏
+  assert.match(r.qualityBar.bar, /验证过/)
+  assert.ok(r.qualityBar.selfCheck.some(s => s.includes('TODO')))
+  assert.ok(r.qualityBar.selfCheck.some(s => s.includes('盲改')))
+})
+
 test('getRecipe 按 id 精确获取', () => {
   const r = getRecipe('html-report')
   assert.ok(r)
@@ -238,7 +290,42 @@ test('presentation 方案可选依赖 ppt_create（缺失不阻断）', () => {
   const ppt = r.capabilities.find(c => c.id === 'ppt_create')
   assert.ok(ppt)
   assert.equal(ppt.optional, true)
-  assert.equal(ppt.source, 'dsh-office-tools')
+  assert.equal(ppt.source, 'dsh-univer-office')
+})
+
+test('content-cards 方案命中多平台信息图且带品牌澄清', () => {
+  const found = findRecipesByGoal('把文章做成能发公众号和小红书的信息图卡片')
+  assert.ok(found.some(f => f.recipe.id === 'content-cards'))
+  const r = getRecipe('content-cards')
+  assert.ok(r)
+  assert.ok(r.questions.some(q => q.key === 'brand'))
+  assert.ok(r.questions.some(q => q.key === 'platform'))
+  assert.ok(r.questions.every(q => q.translate))
+  assert.ok(r.verification.some(v => v.kind === 'content_match' && v.contains === 'viewBox'))
+})
+
+test('content-cards 质量门槛：低密度 + 品牌化零工具痕迹', () => {
+  const r = getRecipe('content-cards')
+  assert.ok(r.qualityBar)
+  const checks = r.qualityBar.checks.join('\n')
+  assert.match(checks, /低密度/)
+  assert.match(checks, /900×383|900x383|公众号封面/)
+  assert.match(checks, /1080×1440|小红书/)
+  assert.match(checks, /品牌/)
+  // 新手艺标准：版式系统 + 色彩克制 + 移动端字号 + 杜绝 AI 味
+  assert.match(checks, /边距|对齐全卡统一|间距/)
+  assert.match(checks, /主色|对比/)
+  assert.match(checks, /72px/)
+  const guidance = r.guidance.join('\n')
+  assert.match(guidance, /不用 emoji/)
+  assert.match(guidance, /渐变只从主色衍生/)
+  assert.match(guidance, /任何一张卡都不放段落文字|每张卡都不放段落文字/)
+  // 负向验收：绝不能出现工具痕迹
+  assert.ok(r.verification.some(v => v.kind === 'content_absent' && v.mustNotContain === 'Ming'))
+  const self = r.qualityBar.selfCheck.join('\n')
+  assert.match(self, /水印|由.+生成/)
+  assert.match(self, /emoji|花哨渐变/)
+  assert.match(r.guidance.join('\n'), /绝不出现 Ming|不出现 Ming|工具痕迹/)
 })
 
 test('findRecipesByGoal 命中发布网站方案', () => {
@@ -272,7 +359,90 @@ test('recipeCatalog 只暴露目录字段', () => {
   for (const entry of catalog) {
     assert.ok(entry.id && entry.name && entry.description && Array.isArray(entry.triggers))
     assert.equal('capabilities' in entry, false)
+    assert.equal('qualityBar' in entry, false)
   }
+})
+
+// ---------- 质量门槛（第一轮交付标准）----------
+
+test('全部方案都声明第一轮交付质量门槛', () => {
+  for (const r of RECIPES) {
+    assert.ok(r.qualityBar, `方案 ${r.id} 应声明 qualityBar`)
+    assert.ok(r.qualityBar.bar.length >= 5)
+    assert.ok(r.qualityBar.checks.length >= 2, `方案 ${r.id} checks 太少`)
+    assert.ok(r.qualityBar.selfCheck.length >= 2, `方案 ${r.id} selfCheck 太少`)
+  }
+})
+
+test('personal-site 质量门槛直击「第一轮太朴素」痛点', () => {
+  const r = getRecipe('personal-site')
+  assert.ok(r)
+  // 执行要求里不再让子代理「先用占位」，而是要求真实语义文案
+  assert.ok(r.guidance.some(g => g.includes('绝不用 Lorem 占位')))
+  // 质量门槛覆盖用户实测喊的痛点：视觉主题、真实文案、动效、适配
+  const checks = r.qualityBar.checks.join('')
+  assert.match(checks, /视觉主题/)
+  assert.match(checks, /真实质感/)
+  assert.match(checks, /动效|交互/)
+  assert.match(checks, /移动端/)
+  assert.match(r.qualityBar.bar, /高质感/)
+})
+
+test('personal-site 手艺标准：首屏目标 + 排版系统 + 禁默认样式 + 负向验收', () => {
+  const r = getRecipe('personal-site')
+  assert.ok(r)
+  // 目的先行与排版/色彩系统写进执行要求
+  const guidance = r.guidance.join('\n')
+  assert.match(guidance, /3 秒内说清|3秒内说清/)
+  assert.match(guidance, /字号阶梯|行高/)
+  assert.match(guidance, /默认蓝链接|Times|默认样式/)
+  assert.match(guidance, /移动端优先|390px/)
+  // 验收里能自动拦截 Lorem 占位
+  assert.ok(r.verification.some(v => v.kind === 'content_absent' && v.mustNotContain === 'Lorem'))
+})
+
+test('assembleContext 注入第一轮交付标准与自查清单', () => {
+  const plan = {
+    goal: 'x',
+    recipeId: 'personal-site',
+    recipeName: '搭建个人网站/主页',
+    matchedBy: 'rules:个人网站',
+    capabilities: [{ ref: { kind: 'tool', id: 'fs_*', purpose: 'x', trust: 'official' }, available: true }],
+    guidance: ['先搭骨架'],
+    delegate: { provider: 'spawn' },
+    verification: [],
+    executable: true,
+    missingRequired: [],
+    qualityBar: {
+      bar: '这一轮就交付「打开能直接展示的高质感网站」',
+      checks: ['有明确的视觉主题', '有存在感的交互'],
+      selfCheck: ['第一眼是否「有设计感」', '所有导航链接是否都能点击跳转'],
+    },
+  }
+  const lines = assembleContext(plan)
+  const text = lines.join('\n')
+  assert.match(text, /第一轮交付标准/)
+  assert.match(text, /这一轮就交付「打开能直接展示的高质感网站」/)
+  assert.match(text, /有明确的视觉主题/)
+  assert.match(text, /交付前自查/)
+  assert.match(text, /第一眼是否「有设计感」/)
+})
+
+test('assembleContext 无质量门槛时不注入交付标准', () => {
+  const plan = {
+    goal: 'x',
+    recipeId: null,
+    recipeName: null,
+    matchedBy: 'no-recipe',
+    capabilities: [],
+    guidance: [],
+    delegate: { provider: 'spawn' },
+    verification: [],
+    executable: true,
+    missingRequired: [],
+  }
+  const lines = assembleContext(plan)
+  assert.ok(!lines.some(l => l.includes('第一轮交付标准')))
 })
 
 // ---------- Assembler ----------
@@ -350,6 +520,37 @@ test('verifyChecks 空断言列表', async () => {
     const summary = await verifyChecks([], dir)
     assert.equal(summary.passed, 0)
     assert.equal(summary.failed, 0)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('verifyChecks content_absent 抓出禁止内容（工具水印/占位）', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ming-cap-absent-'))
+  try {
+    await writeFile(join(dir, 'card.svg'), '<svg viewBox="0 0 900 383">FamilySpace</svg>', 'utf-8')
+    await writeFile(join(dir, 'bad.svg'), '<svg>由 Ming 生成</svg>', 'utf-8')
+    await writeFile(join(dir, 'index.html'), '<html><body>hi</body></html>', 'utf-8')
+
+    // 只查干净的 card.svg：通过
+    const clean = await verifyChecks([{ kind: 'content_absent', pattern: 'card.svg', mustNotContain: 'Ming' }], dir)
+    assert.equal(clean.passed, 1)
+    // bad.svg 含 Ming：失败并点名文件
+    const dirty = await verifyChecks([{ kind: 'content_absent', pattern: '**/*.svg', mustNotContain: 'Ming' }], dir)
+    assert.equal(dirty.failed, 1)
+    assert.match(dirty.results[0].detail, /bad\.svg/)
+    // 不匹配任何文件：视为失败（无法证明干净）
+    const empty = await verifyChecks([{ kind: 'content_absent', pattern: '*.txt', mustNotContain: 'x' }], dir)
+    assert.equal(empty.passed, 0)
+    // 对 HTML 用两个断言：包含 + 不含，独立工作
+    const site = await verifyChecks(
+      [
+        { kind: 'content_match', pattern: 'index.html', contains: '<html' },
+        { kind: 'content_absent', pattern: 'index.html', mustNotContain: 'Lorem' },
+      ],
+      dir,
+    )
+    assert.equal(site.passed, 2)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

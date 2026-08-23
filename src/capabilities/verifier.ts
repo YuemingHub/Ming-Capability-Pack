@@ -81,6 +81,25 @@ async function verifyOne(check: VerificationCheck, workdir: string, signal?: Abo
       }
       return { check, passed: true, detail: `${hits.length} 个文件包含「${check.contains}」：${hits.join('、')}` }
     }
+    case 'content_absent': {
+      if (files.length === 0) {
+        return { check, passed: false, detail: `未找到匹配「${check.pattern}」的文件，无法检查内容` }
+      }
+      const violations: string[] = []
+      for (const file of files) {
+        signal?.throwIfAborted()
+        try {
+          const content = await readFile(file, 'utf-8')
+          if (content.includes(check.mustNotContain)) violations.push(file)
+        } catch {
+          /* 二进制/不可读文件跳过 */
+        }
+      }
+      if (violations.length > 0) {
+        return { check, passed: false, detail: `${violations.length} 个文件包含禁止内容「${check.mustNotContain}」：${violations.join('、')}` }
+      }
+      return { check, passed: true, detail: `${files.length} 个文件均未包含「${check.mustNotContain}」` }
+    }
     case 'dir_nonempty': {
       if (files.length === 0) {
         return { check, passed: false, detail: '目录中未发现任何文件' }
@@ -121,6 +140,8 @@ function describeCheck(check: VerificationCheck): string {
       return `检查文件「${check.pattern}」存在`
     case 'content_match':
       return `检查「${check.pattern}」包含「${check.contains}」`
+    case 'content_absent':
+      return `检查「${check.pattern}」不含「${check.mustNotContain}」`
     case 'dir_nonempty':
       return `检查目录「${check.pattern}」非空`
   }

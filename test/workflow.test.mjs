@@ -125,7 +125,7 @@ test('runWorkflow 步骤缺能力：不白跑，停在本步引导装配', async
         id: 'publish',
         name: '发布',
         goal: '发布上线',
-        capabilities: [{ kind: 'tool', id: 'publish_deploy', source: 'dsh-deploy-tools', purpose: '把静态网站发布到公开地址', trust: 'community' }],
+        capabilities: [{ kind: 'tool', id: 'video_publish', source: 'dsh-video-clip', purpose: '把视频发布到短视频平台', trust: 'community' }],
         pitfalls: [{ symptom: '没有发布能力', fix: '走 ming_install 装配' }],
       },
     ]
@@ -141,15 +141,46 @@ test('runWorkflow 步骤缺能力：不白跑，停在本步引导装配', async
         }
       },
     }
-    const result = await runWorkflow(mockCtx(subagents, []), makeExec(workdir), '目标', [], steps, workdir)
+    const result = await runWorkflow(
+      mockCtx(subagents, []),
+      makeExec(workdir),
+      '目标',
+      [],
+      steps,
+      workdir,
+      {
+        dispatch: {
+          // 注入假市场：video_publish（不在 curated）→ 市场候选，不碰真实网络
+          search: async () => ({
+            ok: true,
+            query: 'video',
+            total: 1,
+            plugins: [{
+              id: 'dsh-video-clip', name: 'dsh-video-clip', owner: 'dshteam',
+              url: 'https://example.com', category: 'media',
+              description: { en: 'publish video to short-video platform', zh: '把视频发布到短视频平台' },
+              stars: 200, installCount: 50, growth24h: 0, added: '', pushedAt: '',
+              install: 'dsh plugin --profile web add dsh-video-clip',
+            }],
+          }),
+        },
+      },
+    )
     assert.equal(result.success, false)
     assert.equal(result.failureKind, 'capability-missing')
     assert.equal(result.failedStepId, 'publish')
     assert.equal(publishedGoals.length, 1) // 只委派了第一步，发布步没被白跑
     assert.ok(publishedGoals[0].includes('建站'))
     assert.equal(result.stepResults[0].outcome?.success, true) // 前面步骤照常完成
-    assert.equal(result.stepResults[1].blockedBy?.ref.id, 'publish_deploy')
+    assert.equal(result.stepResults[1].blockedBy?.ref.id, 'video_publish')
     assert.deepEqual(result.pitfalls, [{ symptom: '没有发布能力', fix: '走 ming_install 装配' }])
+    // 中间件自动去市场找最好的：缺能力时不甩给用户，给出「找最好的 → 回确认 → 重启继续」的闭环
+    // 社区源必须如实说「待你确认」，绝不谎称已自动装好
+    assert.match(result.summary, /中间件已去市场找到最佳工具/)
+    assert.match(result.summary, /建议装配 dsh-video-clip/)
+    assert.match(result.summary, /回一句「确认」/)
+    assert.match(result.summary, /「继续」/)
+    assert.doesNotMatch(result.summary, /已自动安装/) // 社区源只是建议，不是已装
   } finally {
     await rm(workdir, { recursive: true, force: true })
   }
@@ -178,6 +209,81 @@ test('runWorkflow workflowFrom 续跑：跳过已完成步骤', async () => {
   }
 })
 
+test('runWorkflow 无效 workflowFrom：明确报错，绝不静默全跳过假装完成', async () => {
+  const workdir = await mkdtemp(join(tmpdir(), 'ming-wf-'))
+  try {
+    const steps = [
+      { id: 'a', name: '第一步', goal: '做 A' },
+      { id: 'b', name: '第二步', goal: '做 B' },
+    ]
+    const calls = []
+    const subagents = makeSubagent([
+      () => { calls.push('a'); return okRun('A 完成') },
+      () => { calls.push('b'); return okRun('B 完成') },
+    ])
+    // 主模型传错 id（如把「继续」两个字当续跑点）→ 必须失败并说明，不能返回 success:true 骗用户「都做好了」
+    const result = await runWorkflow(mockCtx(subagents), makeExec(workdir), '目标', [], steps, workdir, { workflowFrom: '继续' })
+    assert.equal(result.success, false)
+    assert.equal(result.failureKind, 'invalid-workflow-from')
+    assert.deepEqual(calls, []) // 没有任何步骤被执行
+    assert.match(result.summary, /没有这一步/)
+  } finally {
+    await rm(workdir, { recursive: true, force: true })
+  }
+})
+
+test('runWorkflow stopAfter：本步验收通过后暂停，等用户确认再继续', async () => {
+  const workdir = await mkdtemp(join(tmpdir(), 'ming-wf-'))
+  try {
+    const steps = [
+      {
+        id: 'orient',
+        name: '现状探测',
+        goal: '产出 PROJECT.md',
+        stopAfter: true,
+        verification: [{ kind: 'file_exists', pattern: 'PROJECT.md', note: '应有项目地图' }],
+      },
+      { id: 'build', name: '动手实现', goal: '改代码' },
+    ]
+    const calls = []
+    const subagents = makeSubagent([
+      async () => { await writeFile(join(workdir, 'PROJECT.md'), '# 项目\n\n怎么运行：node main.js\n'); return okRun('地图已生成') },
+      () => { calls.push('build'); return okRun('实现完成') },
+    ])
+    const result = await runWorkflow(mockCtx(subagents), makeExec(workdir), '我迷茫，不知道下一步', [], steps, workdir)
+    assert.equal(result.success, true)
+    assert.equal(result.stoppedAt, 'orient')
+    assert.equal(result.resumeFrom, 'build') // 暂停时算出下一步，供「继续」指引直接用
+    assert.equal(result.stepResults.length, 1) // 停在 orient，build 没跑
+    assert.deepEqual(calls, []) // 迷茫场景不擅自改代码
+    assert.match(result.summary, /等你确认/)
+    // 用户说「继续」→ workflowFrom=暂停步的下一步，orient 跳过、build 执行
+    const resumed = await runWorkflow(mockCtx(subagents), makeExec(workdir), '继续', [], steps, workdir, { workflowFrom: 'build' })
+    assert.equal(resumed.success, true)
+    assert.equal(resumed.stoppedAt, undefined)
+    assert.equal(resumed.stepResults[0].skipped, true) // orient 不重做
+    assert.deepEqual(calls, ['build'])
+  } finally {
+    await rm(workdir, { recursive: true, force: true })
+  }
+})
+
+test('workflowNextSteps 暂停步给出「继续」指引（指向下一步）', () => {
+  const wf = {
+    success: true,
+    stoppedAt: 'orient',
+    resumeFrom: 'build', // runWorkflow 暂停时算出下一步
+    stepResults: [
+      { step: { id: 'orient', name: '现状探测', goal: 'x' }, skipped: false, outcome: { success: true, summary: 'ok', artifacts: [] } },
+    ],
+    summary: '等你确认',
+  }
+  const steps = workflowNextSteps(wf)
+  assert.ok(steps.some(s => s.includes('「继续」')))
+  assert.ok(steps.some(s => s.includes('workflowFrom=build')))
+  assert.ok(!steps.some(s => s.includes('workflowFrom=orient'))) // 绝不指向暂停步本身（会重跑并死循环）
+})
+
 test('workflowNextSteps 缺能力时给出搜索词与续跑指引', () => {
   const wf = {
     success: false,
@@ -194,11 +300,31 @@ test('workflowNextSteps 缺能力时给出搜索词与续跑指引', () => {
     pitfalls: [],
     summary: '缺能力',
   }
-  const steps = workflowNextSteps(wf, { target: 'GitHub Pages' })
-  assert.ok(steps.some(s => s.includes('ming_install')))
-  assert.ok(steps.some(s => s.includes('把静态网站发布到公开地址')))
+  const steps = workflowNextSteps(wf)
   assert.ok(steps.some(s => s.includes('workflowFrom=publish')))
-  assert.ok(steps.some(s => s.includes('GitHub Pages')))
+})
+
+test('workflowNextSteps 缺能力且是社区建议时给「回确认」指引，不再让用户自己搜插件', () => {
+  const wf = {
+    success: false,
+    failureKind: 'capability-missing',
+    failedStepId: 'publish',
+    stepResults: [
+      { step: { id: 'a', name: '建站', goal: 'x' }, skipped: false, outcome: { success: true, summary: 'ok', artifacts: [] } },
+      {
+        step: { id: 'publish', name: '发布', goal: 'x' },
+        skipped: false,
+        blockedBy: { ref: { kind: 'tool', id: 'publish_deploy', purpose: '把静态网站发布到公开地址' }, available: false },
+      },
+    ],
+    pitfalls: [],
+    summary: '建议装配 sealos-skills',
+  }
+  const steps = workflowNextSteps(wf)
+  // 中间件已自动推荐，这里只让用户「回确认」，不把搜插件的技术活推回给用户
+  assert.ok(steps.some(s => s.includes('回一句「确认」')))
+  assert.ok(steps.some(s => s.includes('workflowFrom=publish')))
+  assert.ok(!steps.some(s => s.includes('ming_install（mode=search')))
 })
 
 test('workflowNextSteps 执行失败时给出坑位修法', () => {

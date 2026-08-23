@@ -28,6 +28,33 @@ export interface ResolveInput {
 /** 通配能力 id（如 fs_*）视为基础能力必有，不探测 */
 const WILDCARD_TOOL = /^\w+\*$/
 
+/**
+ * 触发词加权：暗示「复杂/多模块/带逻辑」的词权重更高。
+ * 作用：同样的命中数下，复杂项目语义（后台/系统/应用）不被「做网站/建站」这类通用词淹掉。
+ */
+const TRIGGER_WEIGHT: Record<string, number> = {
+  // 从 0 开发的复杂信号
+  大型项目: 3, 复杂项目: 3, 开发项目: 3, 做项目: 3, 开发一个: 3,
+  做一个应用: 3, 做个应用: 3, 做一个系统: 3, 做个系统: 3, 做一个工具: 3, 做个工具: 3, 写一个程序: 3,
+  全栈: 3, 后台: 3, 管理系统: 3, web应用: 3, 小程序: 3, 爬虫: 3, 自动化: 3, 机器人: 3,
+  系统: 3, 应用: 3, 工具: 3, 数据库: 3, 注册: 3, 登录: 3, 账号: 3, api: 3, 接口: 3, 服务端: 3,
+  // 存量项目的强信号（修 bug / 加功能 / 迷茫 / 已有代码）
+  '修 bug': 3, '修个 bug': 3, '改 bug': 3, '有 bug': 3, '出 bug': 3, '报错': 3, '崩溃': 3, '坏了': 3, '不工作': 3, '没反应': 3,
+  '加个功能': 3, '加功能': 3, '实现功能': 3, '实现一个功能': 3, '加一个功能': 3, '新功能': 3, '做个功能': 3, '优化一下': 3, '重构': 3,
+  '我的项目': 3, '这个项目': 3, '那个项目': 3, '已有项目': 3, '现有项目': 3, '接手': 3, '别人写的': 3, '克隆': 3, '代码库': 3, '源码': 3,
+  '看不懂': 3, '不知道下一步': 3, '接下来做什么': 3, '不知道做什么': 3, '迷茫': 3, '看看这个项目': 3, '分析一下这个项目': 3, '项目是干嘛的': 3, '怎么运行的': 3,
+}
+
+/** 加权分相同时的特化兜底（数值越大越优先）：如纯「做网站」仍归 personal-site */
+const RECIPE_SPECIFICITY: Record<string, number> = {
+  'personal-site': 2,
+  'big-project': 1,
+}
+
+function weightOfHits(hits: string[]): number {
+  return hits.reduce((score, h) => score + (TRIGGER_WEIGHT[h] ?? 1), 0)
+}
+
 async function probeCapability(ctx: Context, ref: CapabilityRef): Promise<CapabilityAvailability> {
   // 通配符基础能力：视为可用
   if (ref.kind === 'tool' && WILDCARD_TOOL.test(ref.id)) {
@@ -98,6 +125,7 @@ function planFromRecipe(goal: string, recipe: Recipe, matchedBy: string, capabil
     verification: recipe.verification,
     questions: recipe.questions,
     workflow: recipe.workflow,
+    qualityBar: recipe.qualityBar,
     executable: missingRequired.length === 0,
     missingRequired,
   }
@@ -135,8 +163,14 @@ export async function resolveCapabilities(ctx: Context, input: ResolveInput): Pr
   const candidates = findRecipesByGoal(input.goal)
   if (candidates.length === 0) return genericPlan(input.goal, 'no-recipe')
 
-  // 规则命中：选命中触发词最多的方案（确定性优先）
-  candidates.sort((a, b) => b.hits.length - a.hits.length)
+  // 规则命中：按「加权命中分」排序（确定性优先）。
+  // 加权原因：像「做一个带后台的网站」会同时命中 personal-site（做网站）与 big-project（后台），
+  // 权重让「后台/系统/应用」这类暗示复杂多模块的词压过「做网站」这类通用词，big-project 才接得住复杂请求；
+  // 加权分相同时按特化度兜底（如纯「做网站」仍归 personal-site，它为此打磨过手艺标准）。
+  candidates.sort((a, b) =>
+    (weightOfHits(b.hits) - weightOfHits(a.hits)) ||
+    ((RECIPE_SPECIFICITY[b.recipe.id] ?? 1) - (RECIPE_SPECIFICITY[a.recipe.id] ?? 1)),
+  )
   const { recipe, hits } = candidates[0]
 
   const capabilities: CapabilityAvailability[] = []

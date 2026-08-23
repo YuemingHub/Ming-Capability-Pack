@@ -141,10 +141,31 @@ type VerificationCheck = {
     contains: string;
     note?: string;
 } | {
+    kind: 'content_absent';
+    pattern: string;
+    mustNotContain: string;
+    note?: string;
+} | {
     kind: 'dir_nonempty';
     pattern: string;
     note?: string;
 };
+/**
+ * 质量门槛：Ming 替用户定义「什么算好」。
+ *
+ * 模型变强后「怎么做到」越来越便宜，产品的价值上移到「做到什么、什么算好」。
+ * qualityBar 就是每个领域的「好」：第一轮交付就要达到，不是「先出个简单的再迭代」。
+ * 与 verification（硬验收：文件存在/内容匹配）不同，qualityBar 是主观质量标准，
+ * 靠子代理执行时对照自查，产出「拿得出手」而非「能跑就行」。
+ */
+interface QualityBar {
+    /** 一句话定位：第一轮交付是什么水平（注入子代理 prompt，直接决定产出预期） */
+    bar: string;
+    /** 具体可检查的质量要求（视觉/内容/交互/适配等，逐条注入） */
+    checks: string[];
+    /** 交付前必须自查的清单（子代理执行完逐条自查，全过再汇报完成） */
+    selfCheck: string[];
+}
 /** 工作流某一步常见的坑：用户「搞半天搞不定」的那些原因 + 修法 */
 interface Pitfall {
     /** 失败时的常见现象（人话） */
@@ -166,6 +187,12 @@ interface WorkflowStep {
     verification?: VerificationCheck[];
     /** 本步常见坑与修法（失败时给用户的具体提示） */
     pitfalls?: Pitfall[];
+    /**
+     * 本步验收通过后暂停工作流，等待用户确认/选择后再继续。
+     * 用于「动用户代码前先交底」「迷茫时给出建议清单等用户选」这类产品决策确认点；
+     * 用户对 Ming 说「继续」后，以 workflowFrom=本步 id 从下一步接着做。
+     */
+    stopAfter?: boolean;
 }
 /** 执行前需要向用户澄清的关键问题（只问必要的，其余用默认值） */
 interface ClarifyQuestion {
@@ -208,6 +235,8 @@ interface Recipe {
     workflow?: WorkflowStep[];
     /** 执行前可能需要澄清的关键问题（默认值兜底；策略 mvp-first 时跳过） */
     questions?: ClarifyQuestion[];
+    /** 第一轮交付的质量门槛（Ming 替用户定义「什么算好」，注入子代理 prompt） */
+    qualityBar?: QualityBar;
 }
 /** 能力可用性探测结果 */
 interface CapabilityAvailability {
@@ -239,6 +268,8 @@ interface CapabilityPlan {
     workflow?: WorkflowStep[];
     /** 方案声明的澄清问题（供 clarify-first 策略用；未命中方案为空） */
     questions?: ClarifyQuestion[];
+    /** 方案声明的第一轮交付质量门槛（未命中方案为 undefined） */
+    qualityBar?: QualityBar;
 }
 /** 单个断言结果 */
 interface VerificationResult {
@@ -252,6 +283,176 @@ interface VerificationSummary {
     failed: number;
     results: VerificationResult[];
 }
+
+/**
+ * DSH 插件市场客户端 —— 能力目录的外部事实源
+ *
+ * 两个真实市场：
+ *   1. DSH Marketplace（https://dshmarketplace.dev）——4,907+ 插件的公开 JSON API，
+ *      无 key、无限流、CORS 全开，每条带中英文摘要与解析好的安装命令。
+ *      默认市场（兜底搜索用）。
+ *   2. 1024Store（https://api.deepseek1024.com）——DeepSeek Harness 社区插件的
+ *      公开目录，匿名可用但有限流；保留为 fallback。
+ *
+ * 本模块负责把「Recipe 声明的能力缺口」翻译成「市场上真实存在、可安装的插件」，
+ * 返回官方的 `dsh plugin add` 安装命令，交给用户/主模型决策。
+ *
+ * Marketplace 的 install 字段约定（重要）：
+ *   - install 可为 null（monorepo 子目录 / 未发包的插件装不上），绝不用占位串；
+ *     installable 布尔值说的是同一件事。本层只保留「installable && install」的候选，
+ *     绝不给调用方一条跑不通的命令。
+ *   - install 形如 github:owner/repo#packages/x 时也是装不上的（pnpm 把 # 当 git ref），
+ *     由 dispatch 层的 isRunnableInstall 兜底过滤。
+ *   - 返回的命令都带 --profile web；本层在 buildInstallCommand 里按当前 profile 重写。
+ *
+ * 网络失败时优雅降级（ok:false + 人类可读原因），不影响主流程。
+ */
+interface StorePlugin {
+    id: string;
+    name: string;
+    owner: string;
+    url: string;
+    category: string;
+    description: {
+        en?: string;
+        zh?: string;
+    };
+    stars: number;
+    installCount: number;
+    growth24h: number;
+    added: string;
+    pushedAt: string;
+    install: string;
+}
+interface StoreSearchOptions {
+    /** 返回数量，默认 5，最大 10 */
+    limit?: number;
+    /** 排序：stars（默认）/ growth24h（近 24h 热度）/ added（新近加入） */
+    sortBy?: 'stars' | 'growth24h' | 'added';
+    /** 显式 key；缺省读环境变量 MING_STORE_KEY */
+    key?: string;
+    /** 请求超时毫秒，默认 8000 */
+    timeoutMs?: number;
+}
+interface StoreSearchResult {
+    ok: boolean;
+    query: string;
+    total?: number;
+    plugins: StorePlugin[];
+    /** 失败时的人类可读原因（如网络不可达、限流） */
+    error?: string;
+}
+/** Marketplace /api/v1/plugins 的原始条目 */
+interface MarketplacePlugin {
+    fullName: string;
+    name: string;
+    owner: string;
+    repo: string;
+    subpath?: string;
+    summary?: string;
+    summaryZh?: string;
+    category?: string;
+    language?: string;
+    license?: string;
+    stars: number;
+    pushedAt?: string;
+    repoUrl?: string;
+    npmPackage?: string | null;
+    installKind?: string;
+    /** 唯一可信的安装命令；monorepo 子目录 / 未发包时为 null（不是占位串） */
+    install?: string | null;
+    installable: boolean;
+    installOptions?: Array<{
+        label?: string;
+        cmd?: string;
+        note?: string;
+    }>;
+    riskFlags?: string[];
+    url?: string;
+}
+interface MarketplaceSearchOptions {
+    /** 返回数量，默认 8，最大 100 */
+    limit?: number;
+    /** 请求超时毫秒，默认 8000 */
+    timeoutMs?: number;
+}
+/**
+ * 搜索 DSH Marketplace（无 key、无限流、带中英文摘要）。
+ * 只保留 installable 且有 install 命令的候选——绝不把跑不通的命令交给调用方。
+ */
+declare function searchMarketplacePlugins(query: string, opts?: MarketplaceSearchOptions): Promise<StoreSearchResult>;
+declare function searchStorePlugins(query: string, opts?: StoreSearchOptions): Promise<StoreSearchResult>;
+/** 把搜索结果格式化成给主模型的紧凑文本（含安装命令） */
+declare function formatStoreResult(result: StoreSearchResult, max?: number): string;
+
+/**
+ * 工具调度层（中间件第三职责：根据需求找最好的工具，再动手）
+ *
+ * 用户只说要什么，技术类的事不让他操心。方案需要的能力缺了时，中间件自己完成
+ * 「找 → 选 → 装配」：
+ *   1. 内置 curated 库优先——已知的好工具（官方优先），不用每次搜市场；
+ *   2. 否则去 DSH Marketplace 搜（无 key 无限流、带中英文摘要）→ 按相关度排序 → 选最好的；
+ *      仅保留「一条命令真能装上的」（monorepo 子目录 #path 装不上，绝不给出跑不通的命令）；
+ *      Marketplace 无结果时回退 1024Store；
+ *   3. 可信源（bundled/official）自动安装；社区源（store/github）给一句确认；
+ *   4. 不阻断第一版交付：装好的工具重启 DSH 后对后续迭代生效，本次先用现有工具。
+ *
+ * 安全边界：自动安装只对内置的官方/bundled 来源开放；市场与 github 社区插件
+ * 一律走到「一句确认」，绝不在未经确认时安装第三方代码。
+ */
+
+interface CuratedCapability {
+    /** 能力 id（与 Recipe.capabilities[].id 对应） */
+    id: string;
+    /** 内置已知的最佳来源（如 dsh-office-tools / @liustack/modlens） */
+    source: string;
+    trust: 'bundled' | 'official' | 'community';
+    /** 为什么内置推荐它（人话） */
+    why: string;
+}
+/**
+ * 内置 curated 工具库：常见能力缺口直接命中，中间件不用每次搜市场。
+ * 只放「真实市场验证过、来源可信」的工具——source 来自 1024Store 实际检索结果
+ * （大厂背书 / 官方 / 高安装量），install 命令可直接 `dsh plugin add`。
+ * 安全边界：bundled/official 自动装；community（含大厂社区包）一律「一句确认」。
+ */
+declare const CURATED_CAPABILITIES: CuratedCapability[];
+type DispatchAction = 'installed' | 'proposed' | 'not-found';
+interface DispatchEntry {
+    ref: CapabilityRef;
+    /** 选定的最佳来源（如 dsh-office-tools / github:owner/repo / 市场插件名） */
+    source: string;
+    trust: 'bundled' | 'official' | 'community';
+    /** installed=已自动安装；proposed=社区源待一句确认；not-found=市场也没有 */
+    action: DispatchAction;
+    /** 安装命令（installed/proposed 时有） */
+    command?: string;
+    /** 为什么选它（人话） */
+    reason: string;
+}
+interface DispatchResult {
+    entries: DispatchEntry[];
+    installedCount: number;
+    proposedCount: number;
+    notFoundCount: number;
+    /** 人类可读总结（给用户/主模型看） */
+    summary: string;
+}
+interface DispatchOptions {
+    /** 覆盖市场搜索（测试/网络隔离）；缺省走 Marketplace → 1024Store 兜底 */
+    search?: (query: string) => Promise<StoreSearchResult>;
+    /** 覆盖安装执行（测试隔离；默认走 dsh plugin add） */
+    install?: (source: string) => Promise<{
+        ok: boolean;
+        confirmed?: boolean;
+        detail?: string;
+    }>;
+}
+/**
+ * 调度缺失能力：curated 优先 → 市场兜底 → 可信源自动装 / 社区源提议。
+ * 纯逻辑可单测：search / install 均可注入。
+ */
+declare function dispatchMissingCapabilities(missingRefs: CapabilityRef[], options?: DispatchOptions): Promise<DispatchResult>;
 
 /**
  * 工作流执行器（痛点 1：复杂工作流容易掉坑，「搞半天搞不定」）
@@ -275,13 +476,17 @@ interface WorkflowStepResult {
     /** 本步因缺能力未执行 */
     blockedBy?: CapabilityAvailability;
 }
-type WorkflowFailureKind = 'step-failed' | 'verification-failed' | 'capability-missing';
+type WorkflowFailureKind = 'step-failed' | 'verification-failed' | 'capability-missing' | 'invalid-workflow-from';
 interface WorkflowResult {
     success: boolean;
     stepResults: WorkflowStepResult[];
     /** 失败步 id（成功时为空） */
     failedStepId?: string;
     failureKind?: WorkflowFailureKind;
+    /** 暂停步 id（stopAfter 步骤验收通过后暂停，等待用户确认/选择；成功且未暂停时为空） */
+    stoppedAt?: string;
+    /** 暂停后应从哪一步继续（stopAfter 的下一步；由 runWorkflow 算出，供「继续」指引直接使用） */
+    resumeFrom?: string;
     /** 失败步的坑位（用户「搞半天搞不定」的那些原因的修法） */
     pitfalls?: Pitfall[];
     summary: string;
@@ -292,6 +497,8 @@ interface RunWorkflowOptions {
     workflowFrom?: string;
     /** 装配上下文（方案要求 + 用户确认的方向），注入每个步骤的子代理 prompt */
     baseContext?: string[];
+    /** 覆盖工具调度（测试/网络隔离） */
+    dispatch?: DispatchOptions;
 }
 declare function runWorkflow(ctx: Context, exec: any, goal: string, resources: string[], steps: WorkflowStep[], workdir: string, options?: RunWorkflowOptions): Promise<WorkflowResult>;
 /** 汇总所有执行步的产出路径（供证据卡与汇报） */
@@ -306,7 +513,7 @@ declare function collectWorkflowArtifacts(result: WorkflowResult): string[];
 /** 按失败原因给出可操作的下一步，而非千篇一律的套话 */
 declare function nextStepsFor(outcome: ExecutionOutcome): string[];
 /** 把校验发现的「声称产出但本地不存在」如实附在摘要末尾 */
-declare function workflowNextSteps(result: WorkflowResult, answers?: Record<string, string>): string[];
+declare function workflowNextSteps(result: WorkflowResult): string[];
 /** 把校验发现的「声称产出但本地不存在」如实附在摘要末尾 */
 declare function appendMissingNotice(outcome: ExecutionOutcome): string;
 
@@ -347,9 +554,10 @@ declare function resolveCapabilities(ctx: Context, input: ResolveInput): Promise
  * 产品交互：用户只说「想让什么变成真的」，Ming 不连环追问，
  * 而是先给「怎么做的选择」，让用户挑一个方向再往下走。
  * 不同策略对应不同的中间件调用链：
- *   - mvp-first（推荐）：用默认值直接跑出能看的 MVP，看完再迭代（快链）；
+ *   - mvp-first（推荐）：用高标准的默认值直接做出一版「完整可展示」的成果，看完再打磨细节（快链）；
  *   - clarify-first：先问方案声明的关键问题（只问必要的），按用户答案精确装配再跑（核对链）。
- * 两条链都汇入 ming_auto 执行，区别只在「装配上下文是否注入用户答案」。
+ * 两条链都汇入 ming_auto 执行，区别只在「装配上下文是否注入用户答案」；
+ * 第一轮交付标准由方案声明的 qualityBar 保证，两条链都生效。
  */
 
 /**
@@ -489,56 +697,6 @@ declare function formatVerification(summary: VerificationSummary): string;
 declare function matchesSimplePatternForTest(relPath: string, base: string): boolean;
 
 /**
- * DSH 1024Store 客户端 —— 能力目录的外部事实源
- *
- * 1024Store（https://api.deepseek1024.com）是 DeepSeek Harness 社区插件的公开目录：
- * 匿名即可搜索，GitHub 登录后创建 API Key 可获得更高配额。
- * 本模块负责把「Recipe 声明的能力缺口」翻译成「市场上真实存在、可安装的插件」，
- * 返回官方的 `dsh plugin add` 安装命令，交给用户/主模型决策。
- *
- * 约定：key 绝不硬编码，从环境变量 MING_STORE_KEY 读取（可选，匿名可用）。
- * 网络失败时优雅降级（ok:false + 人类可读原因），不影响主流程。
- */
-interface StorePlugin {
-    id: string;
-    name: string;
-    owner: string;
-    url: string;
-    category: string;
-    description: {
-        en?: string;
-        zh?: string;
-    };
-    stars: number;
-    installCount: number;
-    growth24h: number;
-    added: string;
-    pushedAt: string;
-    install: string;
-}
-interface StoreSearchOptions {
-    /** 返回数量，默认 5，最大 10 */
-    limit?: number;
-    /** 排序：stars（默认）/ growth24h（近 24h 热度）/ added（新近加入） */
-    sortBy?: 'stars' | 'growth24h' | 'added';
-    /** 显式 key；缺省读环境变量 MING_STORE_KEY */
-    key?: string;
-    /** 请求超时毫秒，默认 8000 */
-    timeoutMs?: number;
-}
-interface StoreSearchResult {
-    ok: boolean;
-    query: string;
-    total?: number;
-    plugins: StorePlugin[];
-    /** 失败时的人类可读原因（如网络不可达、限流） */
-    error?: string;
-}
-declare function searchStorePlugins(query: string, opts?: StoreSearchOptions): Promise<StoreSearchResult>;
-/** 把搜索结果格式化成给主模型的紧凑文本（含安装命令） */
-declare function formatStoreResult(result: StoreSearchResult, max?: number): string;
-
-/**
  * 能力安装服务（闭环装配的「装 + 验」）
  *
  * 负责把用户在 1024Store 选中的插件真正装进 DSH profile，并核对安装结果。
@@ -627,4 +785,4 @@ interface InstallOutcome {
 }
 declare function installCapability(source: string): Promise<InstallOutcome>;
 
-export { type ArtifactCheck, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MingResult, type ParsedInstallCommand, type Pitfall, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, dshBinCandidates, extractArtifacts, findRecipesByGoal, formatClarify, formatStoreResult, formatStrategyOptions, formatVerification, getRecipe, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, nextStepsFor, parseInstallCommand, planExecution, profileDirsOf, rankCandidates, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runDshInstall, runWorkflow, searchStorePlugins, stopReasonText, suggestQueryFor, tokensOf, verifyChecks, workflowNextSteps };
+export { type ArtifactCheck, CURATED_CAPABILITIES, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type CuratedCapability, type DispatchAction, type DispatchEntry, type DispatchOptions, type DispatchResult, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MarketplacePlugin, type MingResult, type ParsedInstallCommand, type Pitfall, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, dispatchMissingCapabilities, dshBinCandidates, extractArtifacts, findRecipesByGoal, formatClarify, formatStoreResult, formatStrategyOptions, formatVerification, getRecipe, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, nextStepsFor, parseInstallCommand, planExecution, profileDirsOf, rankCandidates, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runDshInstall, runWorkflow, searchMarketplacePlugins, searchStorePlugins, stopReasonText, suggestQueryFor, tokensOf, verifyChecks, workflowNextSteps };

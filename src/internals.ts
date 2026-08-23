@@ -18,9 +18,18 @@ export { assembleContext } from './capabilities/assembler.js'
 export { resolveCapabilities } from './capabilities/resolver.js'
 export { planExecution, formatStrategyOptions, clarifyStatus, formatClarify, resolveAnswers, STRATEGY_OPTIONS } from './capabilities/planner.js'
 export { findRecipesByGoal, getRecipe, recipeCatalog, RECIPES } from './capabilities/recipes.js'
+export {
+  CURATED_CAPABILITIES,
+  dispatchMissingCapabilities,
+  type CuratedCapability,
+  type DispatchAction,
+  type DispatchEntry,
+  type DispatchOptions,
+  type DispatchResult,
+} from './capabilities/dispatch.js'
 export { buildRecommendationReason, rankCandidates, suggestQueryFor, tokensOf, type RecommendContext, type ScoredCandidate } from './capabilities/recommend.js'
 export { matchesSimplePatternForTest, verifyChecks, formatVerification } from './capabilities/verifier.js'
-export { formatStoreResult, searchStorePlugins, type StorePlugin, type StoreSearchOptions, type StoreSearchResult } from './capabilities/store.js'
+export { formatStoreResult, searchMarketplacePlugins, searchStorePlugins, type MarketplacePlugin, type StorePlugin, type StoreSearchOptions, type StoreSearchResult } from './capabilities/store.js'
 export {
   buildInstallArgs,
   buildInstallCommand,
