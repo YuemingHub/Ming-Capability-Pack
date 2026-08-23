@@ -6,6 +6,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { ACCEPTANCE_PROTOCOL_VERSION } from '../capabilities/protocol.js'
 import type { ExecutionOutcome } from '../types.js'
 
 export interface EvidencePayload {
@@ -33,6 +34,8 @@ export async function writeEvidence(payload: EvidencePayload): Promise<EvidenceF
   const card = {
     id,
     schemaVersion: 1,
+    /** 本次任务使用的验收协议版本（供未来协议演进时历史迁移） */
+    acceptanceProtocolVersion: ACCEPTANCE_PROTOCOL_VERSION,
     timestamp: new Date().toISOString(),
     ...payload,
   }

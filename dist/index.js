@@ -1,259 +1,49 @@
 import {
-  appendMissingNotice,
-  assembleContext,
   buildRecommendationReason,
   clarifyStatus,
-  collectWorkflowArtifacts,
-  dispatchMissingCapabilities,
-  execute,
+  formatAcceptance,
   formatClarify,
   formatStoreResult,
   formatStrategyOptions,
-  formatVerification,
   installCapability,
   matchReason,
-  nextStepsFor,
   parseInstallCommand,
   planExecution,
   rankCandidates,
+  readAcceptanceHistory,
   recipeCatalog,
-  resolveAnswers,
+  registerMingAutoTool,
   resolveCapabilities,
   resolveWorkdir,
-  runWorkflow,
   searchStorePlugins,
-  verifyChecks,
-  workflowNextSteps
-} from "./chunk-FE73CM7S.js";
+  summarizeAcceptance,
+  writeEvidence
+} from "./chunk-LUTCBZ5U.js";
 
-// src/tools/ming-auto.ts
+// src/tools/ming-acceptance.ts
 import { defineTool } from "@deepseek-ai/dsh-tools";
-
-// src/services/evidence-collector.ts
-import { mkdir, writeFile } from "fs/promises";
-import { join } from "path";
-async function writeEvidence(payload) {
-  const dir = join(payload.workdir, "ming-evidence");
-  await mkdir(dir, { recursive: true });
-  const id = `evidence-${Date.now()}`;
-  const card = {
-    id,
-    schemaVersion: 1,
-    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    ...payload
-  };
-  const filepath = join(dir, `${id}.json`);
-  await writeFile(filepath, JSON.stringify(card, null, 2), "utf-8");
-  return { path: filepath, id };
-}
-
-// src/tools/ming-auto.ts
-function formatResult(value) {
-  const lines = [value.summary];
-  if (value.recipe) {
-    lines.push("", `\u65B9\u6848\uFF1A${value.recipe}`);
-  }
-  if (value.artifacts.length > 0) {
-    lines.push("", "\u4EA7\u51FA\uFF1A");
-    value.artifacts.forEach((a) => lines.push(`  - ${a}`));
-  }
-  if (value.verificationSummary) {
-    lines.push("", value.verificationSummary);
-  }
-  if (value.evidence) {
-    lines.push("", `\u8BC1\u636E\u5361\uFF1A${value.evidence}`);
-  }
-  if (value.nextSteps.length > 0) {
-    lines.push("", "\u63A5\u4E0B\u6765\uFF1A");
-    value.nextSteps.forEach((n) => lines.push(`  - ${n}`));
-  }
-  return lines.join("\n");
-}
-function registerMingAutoTool(ctx) {
+function registerMingAcceptanceTool(ctx) {
   ctx.tools.register(defineTool({
-    name: "ming_auto",
-    description: `Ming \u667A\u80FD\u52A9\u624B\uFF1A\u7528\u6237\u7528\u81EA\u7136\u8BED\u8A00\u63CF\u8FF0\u60F3\u505A\u7684\u4E8B\uFF0CMing \u81EA\u52A8\u5339\u914D\u5185\u7F6E\u65B9\u6848\u5305\u5E76\u88C5\u914D\u80FD\u529B\uFF0C
-\u4EA4\u7ED9 Harness \u539F\u751F Agent \u771F\u6B63\u5B8C\u6210\uFF0C\u4EA7\u51FA\u771F\u5B9E\u6587\u4EF6\u5E76\u72EC\u7ACB\u9A8C\u8BC1\u3002
-
-\u9002\u5408\uFF1A\u751F\u6210\u7F51\u7AD9\u3001\u5904\u7406\u56FE\u7247/\u6570\u636E\u3001\u6574\u7406\u6587\u4EF6\u3001\u5199\u6587\u6863\u3001\u81EA\u52A8\u5316\u5DE5\u4F5C\u6D41\u7B49\u4EFB\u4F55\u53EF\u63CF\u8FF0\u7684\u4EFB\u52A1\u3002
-\u63D0\u793A\uFF1A\u5148\u8C03\u7528 ming_plan \u67E5\u770B\u7B56\u7565\u9009\u62E9\uFF08\u76F4\u63A5\u505A\u4E00\u7248\u5B8C\u6574\u7684 / \u5148\u5BF9\u9F50\u9700\u6C42\uFF09\uFF0C\u518D\u6309\u7528\u6237\u9009\u62E9\u628A strategy \u4F20\u8FDB\u6765\uFF1B
-\u9009 clarify-first \u65F6\u5148\u7528 ming_clarify \u5BF9\u8BDD\u5F0F\u6838\u5BF9\uFF0C\u628A\u7FFB\u8BD1\u6210\u7CFB\u7EDF\u903B\u8F91\u7684\u7B54\u6848\u653E\u8FDB answers \u518D\u6267\u884C\u3002
-\u4E5F\u53EF\u76F4\u63A5\u6307\u5B9A recipe \u65B9\u6848 id\u3002`,
-    parameters: {
-      goal: {
-        type: "string",
-        required: true,
-        description: "\u7528\u6237\u60F3\u5B8C\u6210\u7684\u76EE\u6807\uFF08\u81EA\u7136\u8BED\u8A00\uFF0C\u4E00\u53E5\u8BDD\u6216\u4E00\u6BB5\u8BDD\uFF09"
-      },
-      resources: {
-        type: "array",
-        items: { type: "string" },
-        description: "\u53EF\u9009\uFF1A\u76F8\u5173\u7684\u6587\u4EF6\u8DEF\u5F84\u6216 URL"
-      },
-      recipe: {
-        type: "string",
-        description: "\u53EF\u9009\uFF1A\u901A\u8FC7 ming_catalog \u786E\u8BA4\u7684\u65B9\u6848 id\uFF1B\u4E0D\u4F20\u5219\u81EA\u52A8\u5339\u914D"
-      },
-      strategy: {
-        type: "string",
-        enum: ["mvp-first", "clarify-first"],
-        description: "\u53EF\u9009\uFF1A\u6267\u884C\u7B56\u7565\u3002mvp-first \u7528\u9ED8\u8BA4\u503C\u76F4\u63A5\u505A\uFF08\u9ED8\u8BA4\uFF09\uFF1Bclarify-first \u7528 ming_clarify \u6838\u5BF9\u540E\u7FFB\u8BD1\u6210\u7684\u7CFB\u7EDF\u903B\u8F91\u7B54\u6848\u88C5\u914D\u518D\u505A"
-      },
-      answers: {
-        type: "object",
-        additionalProperties: true,
-        description: "\u53EF\u9009\uFF1Aclarify-first \u65F6\u7ECF ming_clarify \u6838\u5BF9\u5E76\u7FFB\u8BD1\u6210\u7CFB\u7EDF\u903B\u8F91\u7684\u7B54\u6848\uFF08\u952E\u503C\u5BF9\uFF09\uFF1B\u7F3A\u5931\u9879\u7528\u9ED8\u8BA4\u503C"
-      },
-      workflowFrom: {
-        type: "string",
-        description: "\u53EF\u9009\uFF1A\u591A\u6B65\u5DE5\u4F5C\u6D41\u4ECE\u67D0\u4E00\u6B65\u7EE7\u7EED\uFF08\u8DF3\u8FC7\u4E4B\u524D\u7684\u6B65\u9AA4\uFF09\u3002\u5DE5\u4F5C\u6D41\u67D0\u6B65\u7F3A\u80FD\u529B\u88C5\u597D\u540E\uFF0C\u7528\u6237\u8BF4\u300C\u7EE7\u7EED\u300D\u65F6\u4F20\u5165\u5931\u8D25\u6B65\u7684 step id"
-      }
-    },
+    name: "ming_acceptance",
+    description: "Ming \u9A8C\u6536\u5065\u5EB7\u5EA6\u67E5\u8BE2\uFF1A\u67E5\u770B\u5404\u65B9\u6848\u5386\u6B21\u9A8C\u6536\u7684\u901A\u8FC7\u7387\uFF08\u8FD0\u884C\u6B21\u6570\u3001\u901A\u8FC7/\u5931\u8D25\u6570\u3001\u6700\u8FD1\u8FD0\u884C\u65F6\u95F4\uFF09\u3002\u9002\u5408\uFF1A\u7528\u6237\u60F3\u77E5\u9053\u300C\u6211\u7684\u65B9\u6848\u9A8C\u6536\u60C5\u51B5\u5982\u4F55\u300D\u300C\u54EA\u4E2A\u65B9\u6848\u8D28\u91CF\u6700\u7A33\u300D\u3002\u53EA\u8BFB\u5DE5\u5177\uFF0C\u4E0D\u6267\u884C\u4EFB\u52A1\u3001\u4E0D\u5199\u6587\u4EF6\u3002",
+    parameters: {},
     output: {
       schema: {
         type: "object",
         additionalProperties: false,
         properties: {
-          success: { type: "boolean", required: true },
-          mode: { type: "string", required: true },
-          summary: { type: "string", required: true },
-          artifacts: { type: "array", required: true, items: { type: "string" } },
-          evidence: { type: "string", required: true },
-          nextSteps: { type: "array", required: true, items: { type: "string" } },
-          recipe: { type: "string", required: true },
-          planSummary: { type: "string", required: true },
-          verificationSummary: { type: "string", required: true }
+          text: { type: "string", required: true }
         }
       },
-      render: (_args, value) => [{ type: "text", text: formatResult(value) }]
+      render: (_args, value) => [{ type: "text", text: value.text }]
     },
-    async execute(args, exec) {
-      const goal = args.goal;
-      const resources = args.resources ?? [];
+    async execute(_args, exec) {
       const workdir = resolveWorkdir(exec);
-      const plan = await resolveCapabilities(ctx, { goal, recipeId: args.recipe });
-      let dispatchNotice = "";
-      let dispatchNextSteps = [];
-      if (plan.recipeId && !plan.executable) {
-        const missingRefs = plan.capabilities.filter((c) => !c.available && !c.ref.optional).map((c) => c.ref);
-        const dispatch = await dispatchMissingCapabilities(missingRefs);
-        if (dispatch.entries.length > 0) {
-          dispatchNotice = `\u65B9\u6848\u300C${plan.recipeName}\u300D\u7F3A ${missingRefs.length} \u4E2A\u80FD\u529B\uFF0C\u4E2D\u95F4\u4EF6\u5DF2\u81EA\u52A8\u88C5\u914D\uFF1A
-${dispatch.summary}
-
-\u672C\u6B21\u5148\u7528\u73B0\u6709\u5DE5\u5177\u4EA4\u4ED8\u7B2C\u4E00\u7248\uFF0C\u88C5\u597D\u7684\u5DE5\u5177\u91CD\u542F DSH \u540E\u5BF9\u540E\u7EED\u8FED\u4EE3\u751F\u6548\u3002`;
-          dispatchNextSteps = dispatch.entries.filter((e) => e.action === "proposed" && e.command).map((e) => `\u56DE\u300C\u786E\u8BA4\u300D\u5E2E\u4F60\u88C5 ${e.source}\uFF08${e.reason}\uFF09`);
-        }
-      }
-      const answers = resolveAnswers(plan, args.strategy, args.answers);
-      const contextual = assembleContext(plan, answers);
-      if (plan.workflow && plan.workflow.length > 0) {
-        const wfResult = await runWorkflow(ctx, exec, goal, resources, plan.workflow, workdir, {
-          workflowFrom: args.workflowFrom,
-          baseContext: contextual
-        });
-        return workflowToResult(wfResult, plan, goal, resources, workdir);
-      }
-      const outcome = await execute(ctx, goal, resources, exec, { contextual });
-      let verificationSummary = "";
-      let verification;
-      if (outcome.success && plan.verification.length > 0) {
-        const summary = await verifyChecks(plan.verification, workdir);
-        verification = { passed: summary.passed, failed: summary.failed, results: summary.results };
-        verificationSummary = formatVerification(summary);
-      }
-      let evidencePath = "";
-      try {
-        const evidence = await writeEvidence({
-          goal,
-          resources,
-          outcome,
-          workdir,
-          recipe: plan.recipeId ? { id: plan.recipeId, name: plan.recipeName, matchedBy: plan.matchedBy, capabilities: plan.capabilities } : void 0,
-          verification
-        });
-        evidencePath = evidence.path;
-      } catch {
-      }
-      const result = {
-        success: outcome.success,
-        mode: outcome.mode,
-        summary: [dispatchNotice, appendMissingNotice(outcome)].filter(Boolean).join("\n\n"),
-        artifacts: outcome.artifacts,
-        evidence: evidencePath,
-        nextSteps: [...dispatchNextSteps, ...nextStepsFor(outcome)],
-        recipe: plan.recipeName ?? "",
-        planSummary: buildPlanSummary(plan),
-        verificationSummary
-      };
-      return result;
+      const records = await readAcceptanceHistory(workdir);
+      const summaries = summarizeAcceptance(records);
+      return { text: formatAcceptance(summaries) };
     }
   }));
-}
-function buildPlanSummary(plan) {
-  if (!plan.recipeId) return "\u672A\u5339\u914D\u5230\u5185\u7F6E\u65B9\u6848\uFF0C\u8D70\u901A\u7528\u59D4\u6D3E\u6267\u884C";
-  const parts = [`\u65B9\u6848\u300C${plan.recipeName}\u300D\uFF08\u5339\u914D\uFF1A${plan.matchedBy}\uFF09`];
-  if (plan.capabilities.length > 0) {
-    const available = plan.capabilities.filter((c) => c.available).length;
-    const missing = plan.capabilities.filter((c) => !c.available);
-    parts.push(`\u80FD\u529B\u88C5\u914D\uFF1A${available}/${plan.capabilities.length} \u53EF\u7528`);
-    if (missing.length > 0) {
-      parts.push(`\u672A\u88C5\u914D\uFF1A${missing.map((m) => `${m.ref.kind}:${m.ref.id}`).join("\u3001")}`);
-    }
-  }
-  if (plan.workflow && plan.workflow.length > 0) {
-    parts.push(`\u591A\u6B65\u5DE5\u4F5C\u6D41\uFF1A${plan.workflow.map((s) => s.name).join(" \u2192 ")}`);
-  }
-  return parts.join("\uFF1B");
-}
-async function workflowToResult(wf, plan, goal, resources, workdir) {
-  const failedOutcome = wf.stepResults.find((r) => r.step.id === wf.failedStepId)?.outcome;
-  const outcome = {
-    mode: "executed",
-    success: wf.success,
-    summary: wf.summary,
-    artifacts: collectWorkflowArtifacts(wf),
-    error: wf.success ? void 0 : wf.summary,
-    errorKind: failedOutcome?.errorKind
-  };
-  let evidencePath = "";
-  try {
-    const evidence = await writeEvidence({
-      goal,
-      resources,
-      outcome,
-      workdir,
-      recipe: plan.recipeId ? { id: plan.recipeId, name: plan.recipeName, matchedBy: plan.matchedBy, capabilities: plan.capabilities } : void 0
-    });
-    evidencePath = evidence.path;
-  } catch {
-  }
-  return {
-    success: wf.success,
-    mode: "executed",
-    summary: wf.stoppedAt ? wf.summary : wf.success ? appendMissingNotice(outcome) : `\u5DE5\u4F5C\u6D41\u5728\u300C${wf.stepResults.find((r) => r.step.id === wf.failedStepId)?.step.name ?? "\u67D0\u4E00\u6B65"}\u300D\u505C\u4E0B\uFF1A${wf.summary}`,
-    artifacts: outcome.artifacts,
-    evidence: evidencePath,
-    nextSteps: workflowNextSteps(wf),
-    recipe: plan.recipeName ?? "",
-    planSummary: buildPlanSummary(plan),
-    verificationSummary: workflowVerificationSummary(wf)
-  };
-}
-function workflowVerificationSummary(wf) {
-  const lines = [];
-  for (const r of wf.stepResults) {
-    if (r.skipped) {
-      lines.push(`- ${r.step.name}\uFF1A\u8DF3\u8FC7\uFF08\u6B64\u524D\u5DF2\u5B8C\u6210\uFF09`);
-    } else if (r.blockedBy) {
-      lines.push(`- ${r.step.name}\uFF1A\u672A\u6267\u884C\uFF08\u7F3A\u80FD\u529B ${r.blockedBy.ref.kind}:${r.blockedBy.ref.id}\uFF09`);
-    } else if (r.verification) {
-      lines.push(`- ${r.step.name}\uFF1A\u9A8C\u6536 ${r.verification.passed} \u8FC7 / ${r.verification.failed} \u672A\u8FC7`);
-    } else {
-      lines.push(`- ${r.step.name}\uFF1A\u5DF2\u6267\u884C${r.outcome?.success ? "" : "\uFF08\u5931\u8D25\uFF09"}`);
-    }
-  }
-  return lines.join("\n");
 }
 
 // src/tools/ming-catalog.ts
@@ -347,14 +137,14 @@ function registerMingClarifyTool(ctx) {
 
 // src/tools/ming-history.ts
 import { readFile, readdir } from "fs/promises";
-import { join as join2 } from "path";
+import { join } from "path";
 import { defineTool as defineTool4 } from "@deepseek-ai/dsh-tools";
 var DEFAULT_LIMIT = 10;
 var MAX_LIMIT = 50;
 function truncate(text, max) {
   return text.length <= max ? text : `${text.slice(0, max)}\u2026`;
 }
-function formatResult2(value) {
+function formatResult(value) {
   if (value.total === 0) {
     return "\u5F53\u524D\u5DE5\u4F5C\u533A\u8FD8\u6CA1\u6709 Ming \u4EFB\u52A1\u8BB0\u5F55\uFF08\u672A\u627E\u5230 ming-evidence/ \u76EE\u5F55\u6216\u4E3A\u7A7A\uFF09\u3002";
   }
@@ -417,11 +207,11 @@ function registerMingHistoryTool(ctx) {
           }
         }
       },
-      render: (_args, value) => [{ type: "text", text: formatResult2(value) }]
+      render: (_args, value) => [{ type: "text", text: formatResult(value) }]
     },
     async execute(args, exec) {
       const workdir = resolveWorkdir(exec);
-      const dir = join2(workdir, "ming-evidence");
+      const dir = join(workdir, "ming-evidence");
       let rawLimit = Number(args.limit);
       if (!Number.isFinite(rawLimit)) rawLimit = DEFAULT_LIMIT;
       const limit = Math.min(Math.max(Math.floor(rawLimit), 1), MAX_LIMIT);
@@ -436,7 +226,7 @@ function registerMingHistoryTool(ctx) {
       const entries = [];
       for (const file of jsonFiles.slice(0, limit)) {
         try {
-          const card = JSON.parse(await readFile(join2(dir, file), "utf-8"));
+          const card = JSON.parse(await readFile(join(dir, file), "utf-8"));
           const checks = card.outcome?.artifactChecks ?? [];
           entries.push({
             id: String(card.id ?? file.replace(/\.json$/u, "")),
@@ -448,7 +238,7 @@ function registerMingHistoryTool(ctx) {
             missingCount: checks.filter((c) => c.kind === "missing").length,
             errorKind: String(card.outcome?.errorKind ?? ""),
             durationMs: typeof card.outcome?.durationMs === "number" ? card.outcome.durationMs : -1,
-            evidencePath: join2(dir, file)
+            evidencePath: join(dir, file)
           });
         } catch {
         }
@@ -867,6 +657,7 @@ var inject = ["tools", "systemPrompt"];
 async function apply(ctx) {
   ctx.logger.info("\u{1F680} Ming Capability Pack \u6B63\u5728\u52A0\u8F7D...");
   try {
+    registerMingAcceptanceTool(ctx);
     registerMingAutoTool(ctx);
     registerMingCatalogTool(ctx);
     registerMingClarifyTool(ctx);

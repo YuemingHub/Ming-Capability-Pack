@@ -66,6 +66,8 @@ export interface MingResult {
   planSummary: string
   /** 独立验证摘要（文件存在/内容匹配等断言结果） */
   verificationSummary: string
+  /** 验收健康度（该方案累计通过率，让用户看到信任层的累积数据） */
+  acceptanceHealth: string
 }
 
 /** ming_history 单条历史记录 */

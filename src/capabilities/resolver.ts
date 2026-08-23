@@ -12,6 +12,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { findRecipesByGoal, getRecipe } from './recipes.js'
+import { formatProtocolErrors, validateRecipeProtocol } from './protocol.js'
 import { DEFAULT_DELEGATE, type CapabilityAvailability, type CapabilityPlan, type CapabilityRef, type Recipe } from './types.js'
 
 /** ctx.skills 的松散类型（避免强耦合 dsh-skill 的具体类型名） */
@@ -110,6 +111,13 @@ export async function probeCapabilities(ctx: Context, refs: CapabilityRef[]): Pr
 }
 
 function planFromRecipe(goal: string, recipe: Recipe, matchedBy: string, capabilities: CapabilityAvailability[]): CapabilityPlan {
+  // 协议 fail-fast：坏协议在装配阶段就拦下，绝不拖到执行阶段 verifier 才崩。
+  // 正常情况回归测试（test/protocol.test.mjs 遍历全 recipe）已兜底，此异常只在「新增/修改方案写坏协议」时触发。
+  const protocolErrors = validateRecipeProtocol(recipe)
+  if (protocolErrors.length > 0) {
+    throw new Error(`方案「${recipe.id}」验收协议不合法，已中止装配（请修正方案定义）：\n${formatProtocolErrors(protocolErrors)}`)
+  }
+
   const missingRequired = capabilities
     .filter(c => !c.available && !c.ref.optional)
     .map(c => `${c.ref.kind}:${c.ref.id}`)

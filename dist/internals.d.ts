@@ -57,6 +57,8 @@ interface MingResult {
     planSummary: string;
     /** 独立验证摘要（文件存在/内容匹配等断言结果） */
     verificationSummary: string;
+    /** 验收健康度（该方案累计通过率，让用户看到信任层的累积数据） */
+    acceptanceHealth: string;
 }
 /** ming_history 单条历史记录 */
 interface HistoryEntry {
@@ -518,6 +520,50 @@ declare function workflowNextSteps(result: WorkflowResult): string[];
 declare function appendMissingNotice(outcome: ExecutionOutcome): string;
 
 /**
+ * 验收历史回填（标准飞轮第二块基石）
+ *
+ * 把每次独立验收的结果结构化追加到工作区，积累成「每个方案历次验收通过率」
+ * 的原始数据。第一版只做：追加 JSONL 原始记录 + 读回 + 纯函数聚合。
+ * 不做分析 / 报表 / 趋势（YAGNI）——那些等数据真的攒起来再做。
+ *
+ * 落盘位置：<workdir>/ming-evidence/acceptance-history.jsonl
+ * （ming-evidence/ 已被 .gitignore 忽略，不污染仓库）。
+ */
+
+/** 一条验收记录（一次任务的独立验证结果） */
+interface AcceptanceRecord {
+    /** ISO 时间戳 */
+    timestamp: string;
+    recipeId: string | null;
+    recipeName: string | null;
+    passed: number;
+    failed: number;
+    /** 失败断言的 kind 列表（只记 kind，不记整个断言对象，避免膨胀） */
+    failedKinds: string[];
+}
+/** 从验证结果里提取失败断言的 kind（供回填时精简记录） */
+declare function failedKindsOf(results: VerificationResult[]): string[];
+/** 追加一条验收记录到历史（JSONL，每行一条）。返回历史文件路径。 */
+declare function appendAcceptanceRecord(workdir: string, record: AcceptanceRecord): Promise<string>;
+/** 读回全部验收记录（文件不存在时返回空数组；坏行跳过，不因单条损坏丢弃整个历史） */
+declare function readAcceptanceHistory(workdir: string): Promise<AcceptanceRecord[]>;
+/** 单个方案的验收聚合 */
+interface AcceptanceSummary {
+    recipeId: string | null;
+    recipeName: string | null;
+    totalRuns: number;
+    totalPassed: number;
+    totalFailed: number;
+    /** 通过率 0~1；无任何断言记录时为 null */
+    passRate: number | null;
+    lastRunAt: string | null;
+}
+/** 纯函数：把原始记录聚合成「每个方案历次验收通过率」 */
+declare function summarizeAcceptance(records: AcceptanceRecord[]): AcceptanceSummary[];
+/** 把验收聚合格式化成给人/模型看的文本（纯函数，供查询工具与测试复用） */
+declare function formatAcceptance(summaries: AcceptanceSummary[]): string;
+
+/**
  * Capability Assembler：把装配计划转成「可注入执行子代理的上下文」
  *
  * 第一刀只做两件事：
@@ -697,6 +743,49 @@ declare function formatVerification(summary: VerificationSummary): string;
 declare function matchesSimplePatternForTest(relPath: string, base: string): boolean;
 
 /**
+ * 验收协议（Acceptance Protocol）
+ *
+ * 把「什么算好 + 怎么验证」从 Recipe 里抽成一个可独立校验、可版本化的概念。
+ *
+ * 为什么需要它：
+ *   - verification 与 qualityBar 现在是散落在 Recipe 里的普通字段，
+ *     写错断言（拼错 kind、漏 pattern、漏 contains）要拖到执行阶段 verifier 跑
+ *     到 default 分支才崩；本模块让协议在进入执行前就能被静态校验。
+ *   - schemaVersion 让协议未来演进（新增断言 kind、新增质量维度、字段改名）
+ *     时可迁移、可追溯：历史证据卡记录自己由哪个版本的协议产出。
+ *
+ * 第一版只做地基：版本号 + 纯函数校验器。运行时 fail-fast 与协议演进迁移
+ * 留到协议真正开始变化时再上（YAGNI）。
+ */
+
+/** 验收协议 schema 版本。协议结构变更时 +1；证据卡记录本值用于历史迁移。 */
+declare const ACCEPTANCE_PROTOCOL_VERSION = 1;
+/** 协议校验失败的一处问题：定位 + 人话原因 */
+interface ProtocolValidationError {
+    /** 出错位置，如 verification[2] 或 qualityBar.checks */
+    path: string;
+    /** 人话原因（可读给开发者/用户看） */
+    message: string;
+}
+/**
+ * 校验一组验收断言是否合法。
+ * 纯函数，零副作用；返回空数组表示全部合法。
+ */
+declare function validateVerificationChecks(checks: VerificationCheck[]): ProtocolValidationError[];
+/**
+ * 校验质量门槛是否合法。undefined 视为合法（方案可不声明质量门槛）。
+ * 纯函数，零副作用。
+ */
+declare function validateQualityBar(bar: QualityBar | undefined): ProtocolValidationError[];
+/** 把校验错误格式化成人话（供 fail-fast 报错或测试诊断） */
+declare function formatProtocolErrors(errors: ProtocolValidationError[]): string;
+/**
+ * 校验一个完整方案的验收协议（recipe 级断言 + 质量门槛 + 工作流每步断言）。
+ * 返回空数组表示协议合法。resolver 在装配阶段调用本函数 fail-fast。
+ */
+declare function validateRecipeProtocol(recipe: Recipe): ProtocolValidationError[];
+
+/**
  * 能力安装服务（闭环装配的「装 + 验」）
  *
  * 负责把用户在 1024Store 选中的插件真正装进 DSH profile，并核对安装结果。
@@ -785,4 +874,17 @@ interface InstallOutcome {
 }
 declare function installCapability(source: string): Promise<InstallOutcome>;
 
-export { type ArtifactCheck, CURATED_CAPABILITIES, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type CuratedCapability, type DispatchAction, type DispatchEntry, type DispatchOptions, type DispatchResult, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MarketplacePlugin, type MingResult, type ParsedInstallCommand, type Pitfall, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, dispatchMissingCapabilities, dshBinCandidates, extractArtifacts, findRecipesByGoal, formatClarify, formatStoreResult, formatStrategyOptions, formatVerification, getRecipe, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, nextStepsFor, parseInstallCommand, planExecution, profileDirsOf, rankCandidates, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runDshInstall, runWorkflow, searchMarketplacePlugins, searchStorePlugins, stopReasonText, suggestQueryFor, tokensOf, verifyChecks, workflowNextSteps };
+/**
+ * Ming 工具注册（能力织机版）
+ *
+ * `ming_auto` 内部链路：目标 → Capability Resolver（规则/显式命中方案包）
+ * → Assembler（装配上下文）→ 官方子代理执行 → Verifier（独立验证）→ 证据卡。
+ *
+ * 未命中任何方案时退回通用委派（与旧版行为一致）；命中了方案但必选能力缺失时
+ * 诚实失败并给出安装指引，绝不假装已装配。
+ */
+
+/** 把规范结果渲染成给用户/模型看的中文文本 */
+declare function formatMingResult(value: MingResult): string;
+
+export { ACCEPTANCE_PROTOCOL_VERSION, type AcceptanceRecord, type AcceptanceSummary, type ArtifactCheck, CURATED_CAPABILITIES, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type CuratedCapability, type DispatchAction, type DispatchEntry, type DispatchOptions, type DispatchResult, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MarketplacePlugin, type MingResult, type ParsedInstallCommand, type Pitfall, type ProtocolValidationError, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendAcceptanceRecord, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, dispatchMissingCapabilities, dshBinCandidates, extractArtifacts, failedKindsOf, findRecipesByGoal, formatAcceptance, formatClarify, formatMingResult, formatProtocolErrors, formatStoreResult, formatStrategyOptions, formatVerification, getRecipe, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, nextStepsFor, parseInstallCommand, planExecution, profileDirsOf, rankCandidates, readAcceptanceHistory, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runDshInstall, runWorkflow, searchMarketplacePlugins, searchStorePlugins, stopReasonText, suggestQueryFor, summarizeAcceptance, tokensOf, validateQualityBar, validateRecipeProtocol, validateVerificationChecks, verifyChecks, workflowNextSteps };

@@ -16,6 +16,7 @@ import { resolveAnswers } from '../capabilities/planner.js'
 import { resolveCapabilities } from '../capabilities/resolver.js'
 import { formatVerification, verifyChecks } from '../capabilities/verifier.js'
 import type { CapabilityPlan } from '../capabilities/types.js'
+import { appendAcceptanceRecord, failedKindsOf, formatAcceptance, readAcceptanceHistory, summarizeAcceptance } from '../services/acceptance-log.js'
 import { execute, resolveWorkdir } from '../services/executor.js'
 import { writeEvidence } from '../services/evidence-collector.js'
 import { appendMissingNotice, nextStepsFor, workflowNextSteps } from '../services/next-steps.js'
@@ -23,7 +24,7 @@ import { collectWorkflowArtifacts, runWorkflow, type WorkflowResult } from '../s
 import type { ExecutionOutcome, MingResult } from '../types.js'
 
 /** 把规范结果渲染成给用户/模型看的中文文本 */
-function formatResult(value: MingResult): string {
+export function formatMingResult(value: MingResult): string {
   const lines: string[] = [value.summary]
 
   if (value.recipe) {
@@ -37,6 +38,10 @@ function formatResult(value: MingResult): string {
 
   if (value.verificationSummary) {
     lines.push('', value.verificationSummary)
+  }
+
+  if (value.acceptanceHealth) {
+    lines.push('', value.acceptanceHealth)
   }
 
   if (value.evidence) {
@@ -107,9 +112,10 @@ export function registerMingAutoTool(ctx: Context): void {
           recipe: { type: 'string', required: true },
           planSummary: { type: 'string', required: true },
           verificationSummary: { type: 'string', required: true },
+          acceptanceHealth: { type: 'string', required: true },
         },
       },
-      render: (_args, value) => [{ type: 'text', text: formatResult(value as MingResult) }],
+      render: (_args, value) => [{ type: 'text', text: formatMingResult(value as MingResult) }],
     },
 
     async execute(
@@ -168,6 +174,26 @@ export function registerMingAutoTool(ctx: Context): void {
         const summary = await verifyChecks(plan.verification, workdir)
         verification = { passed: summary.passed, failed: summary.failed, results: summary.results }
         verificationSummary = formatVerification(summary)
+
+        // ④' 验收结果回填：把本次验收追加到历史，积累「每个方案通过率」原始数据
+        try {
+          await appendAcceptanceRecord(workdir, {
+            timestamp: new Date().toISOString(),
+            recipeId: plan.recipeId,
+            recipeName: plan.recipeName,
+            passed: summary.passed,
+            failed: summary.failed,
+            failedKinds: failedKindsOf(summary.results),
+          })
+        } catch {
+          /* 回填尽力而为，不阻断交付 */
+        }
+      }
+
+      // ④'' 信任可见：读取累计健康度（含本次回填），让用户看到信任层的累积数据
+      let acceptanceHealth = ''
+      if (verification) {
+        acceptanceHealth = await computeAcceptanceHealth(workdir, plan.recipeId)
       }
 
       // ⑤ 证据卡
@@ -198,11 +224,24 @@ export function registerMingAutoTool(ctx: Context): void {
         recipe: plan.recipeName ?? '',
         planSummary: buildPlanSummary(plan),
         verificationSummary,
+        acceptanceHealth,
       }
 
       return result
     },
   }))
+}
+
+/** 读取当前方案的验收历史（信任可见：只展示与本次任务相关的累计通过率） */
+async function computeAcceptanceHealth(workdir: string, recipeId: string | null): Promise<string> {
+  if (!recipeId) return ''
+  try {
+    const history = await readAcceptanceHistory(workdir)
+    const summary = summarizeAcceptance(history).find(item => item.recipeId === recipeId)
+    return summary ? formatAcceptance([summary]) : ''
+  } catch {
+    return ''
+  }
 }
 
 function buildPlanSummary(plan: CapabilityPlan): string {
@@ -269,6 +308,7 @@ async function workflowToResult(
     recipe: plan.recipeName ?? '',
     planSummary: buildPlanSummary(plan),
     verificationSummary: workflowVerificationSummary(wf),
+    acceptanceHealth: await computeAcceptanceHealth(workdir, plan.recipeId),
   }
 }
 

@@ -13,6 +13,15 @@ export {
   stopReasonText,
 } from './services/executor.js'
 export { appendMissingNotice, nextStepsFor, workflowNextSteps } from './services/next-steps.js'
+export {
+  appendAcceptanceRecord,
+  failedKindsOf,
+  formatAcceptance,
+  readAcceptanceHistory,
+  summarizeAcceptance,
+  type AcceptanceRecord,
+  type AcceptanceSummary,
+} from './services/acceptance-log.js'
 export { collectWorkflowArtifacts, runWorkflow, type WorkflowFailureKind, type WorkflowResult, type WorkflowStepResult } from './services/workflow.js'
 export { assembleContext } from './capabilities/assembler.js'
 export { resolveCapabilities } from './capabilities/resolver.js'
@@ -29,6 +38,14 @@ export {
 } from './capabilities/dispatch.js'
 export { buildRecommendationReason, rankCandidates, suggestQueryFor, tokensOf, type RecommendContext, type ScoredCandidate } from './capabilities/recommend.js'
 export { matchesSimplePatternForTest, verifyChecks, formatVerification } from './capabilities/verifier.js'
+export {
+  ACCEPTANCE_PROTOCOL_VERSION,
+  formatProtocolErrors,
+  validateQualityBar,
+  validateRecipeProtocol,
+  validateVerificationChecks,
+  type ProtocolValidationError,
+} from './capabilities/protocol.js'
 export { formatStoreResult, searchMarketplacePlugins, searchStorePlugins, type MarketplacePlugin, type StorePlugin, type StoreSearchOptions, type StoreSearchResult } from './capabilities/store.js'
 export {
   buildInstallArgs,
@@ -47,6 +64,7 @@ export {
   type InstallOutcome,
   type ParsedInstallCommand,
 } from './services/installer.js'
+export { formatMingResult } from './tools/ming-auto.js'
 export type {
   ArtifactCheck,
   ErrorKind,

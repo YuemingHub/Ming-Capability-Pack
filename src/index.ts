@@ -6,6 +6,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { registerMingAcceptanceTool } from './tools/ming-acceptance.js'
 import { registerMingAutoTool } from './tools/ming-auto.js'
 import { registerMingCatalogTool } from './tools/ming-catalog.js'
 import { registerMingClarifyTool } from './tools/ming-clarify.js'
@@ -27,6 +28,7 @@ export async function apply(ctx: Context): Promise<void> {
   ctx.logger.info('🚀 Ming Capability Pack 正在加载...')
 
   try {
+    registerMingAcceptanceTool(ctx)
     registerMingAutoTool(ctx)
     registerMingCatalogTool(ctx)
     registerMingClarifyTool(ctx)
