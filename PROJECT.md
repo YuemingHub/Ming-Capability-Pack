@@ -106,7 +106,7 @@ npm run cli          # CLI 入口
 
 ## 核心机制
 
-1. **方案包（Recipes）**：整理文件夹 / HTML 报表 / 信息图 / 演示文稿 / 个人网站 / 发布网站 / 大型复杂项目（big-project），每个带质量门槛与验收断言；可导出为跨宿主标准 SKILL.md。
+1. **方案包（Recipes）**：整理文件夹 / HTML 报表 / 信息图 / 演示文稿 / 个人网站 / 发布网站 / 大型复杂项目（big-project）/ 文字作品 / 总结提炼 / 表格数据整理，每个带质量门槛与验收断言；可导出为跨宿主标准 SKILL.md。
 2. **双模式 big-project**：从 0 开发（orient 交底暂停 → build → verify → deliver）与存量项目（修 bug / 加功能 / 迷茫给建议清单，不擅自改代码）。
 3. **能力装配（轻装配）**：curated 官方能力自动装（用户无感）→ 社区能力一句确认 → 市场兜底（Marketplace 优先 + 1024Store 兜底），只给跑得通的命令（过滤 #path 不可装候选）；安装状态机 verified/pending/absent（未确认写入绝不报已装）；**通用缺口探测**：未命中方案时也从目标/资源推断可能需要的能力（视频/图片/表格/发布等），走市场找候选、社区源一句确认（forceConfirm 不自动装）；重型装配交给生态插件 dsh-plugin-autoevo。
 4. **验收协议 v1**：verification / qualityBar 静态校验 fail-fast；每次独立验收追加 `ming-evidence/acceptance-history.jsonl`；`ming_acceptance` 查询各方案通过率与 VTE 北极星。

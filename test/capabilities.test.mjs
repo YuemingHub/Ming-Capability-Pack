@@ -218,6 +218,39 @@ test('findRecipesByGoal 未命中返回空', () => {
   assert.deepEqual(findRecipesByGoal('帮我写一首关于秋天的诗'), [])
 })
 
+test('findRecipesByGoal 命中文字作品方案（写份简历）', () => {
+  const found = findRecipesByGoal('帮我写一份简历')
+  assert.ok(found.some(f => f.recipe.id === 'writing-document'))
+})
+
+test('findRecipesByGoal 命中总结提炼方案（总结长文）', () => {
+  const found = findRecipesByGoal('这篇太长，帮我总结一下要点')
+  assert.ok(found.some(f => f.recipe.id === 'summarize'))
+})
+
+test('findRecipesByGoal 命中表格数据整理方案（汇总表格）', () => {
+  const found = findRecipesByGoal('把这张表汇总一下，统计每月的总数')
+  assert.ok(found.some(f => f.recipe.id === 'data-table'))
+})
+
+test('findRecipesByGoal 写诗不命中文字作品（避免误伤创作类）', () => {
+  const found = findRecipesByGoal('帮我写一首关于秋天的诗')
+  assert.equal(found.some(f => f.recipe.id === 'writing-document'), false)
+})
+
+test('resolveCapabilities 消歧：「写份总结」归文字作品，「帮我总结」归总结提炼', async () => {
+  const written = await resolveCapabilities(mockCtx(), { goal: '帮我写份年终总结' })
+  assert.equal(written.recipeId, 'writing-document')
+  const summarized = await resolveCapabilities(mockCtx(), { goal: '把这篇会议纪要总结一下' })
+  assert.equal(summarized.recipeId, 'summarize')
+})
+
+test('findRecipesByGoal 命中表格整理而非报表（「表格汇总」归 data-table）', () => {
+  const found = findRecipesByGoal('把销售数据表按月份汇总统计')
+  const first = [...found].sort((a, b) => (b.hits.length - a.hits.length))[0]
+  assert.equal(first.recipe.id, 'data-table')
+})
+
 test('findRecipesByGoal 命中大型复杂项目方案', () => {
   assert.ok(findRecipesByGoal('帮我做一个记账系统').some(f => f.recipe.id === 'big-project'))
   assert.ok(findRecipesByGoal('开发一个大型项目').some(f => f.recipe.id === 'big-project'))

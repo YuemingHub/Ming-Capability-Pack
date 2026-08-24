@@ -50,6 +50,8 @@ const TRIGGER_WEIGHT: Record<string, number> = {
 const RECIPE_SPECIFICITY: Record<string, number> = {
   'personal-site': 2,
   'big-project': 1,
+  // 「写份总结」类同时命中 writing-document（写份）与 summarize（总结）时，归创作（写总结文档）
+  'writing-document': 2,
 }
 
 function weightOfHits(hits: string[]): number {
