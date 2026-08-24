@@ -246,6 +246,47 @@ test('formatMingResult 失败任务不展示交付展示（用户需要的是坑
   assert.match(text, /先装配 dsh-univer-office 再重试/)
 })
 
+test('formatDeliveryReview 修正迭代：明确「已按你意见修正、重新做并重新验证」，不因改过就跳过验证', () => {
+  const text = formatDeliveryReview({
+    success: true,
+    mode: 'executed',
+    summary: '已按意见调整首屏',
+    artifacts: ['D:\\out\\index.html'],
+    evidence: 'D:\\out\\evidence.json',
+    nextSteps: [],
+    recipe: '搭建个人网站',
+    planSummary: '',
+    verificationSummary: '【独立验证】通过 3 / 3',
+    acceptanceHealth: '',
+    revised: '首屏太朴素，改成深色科技风',
+  })
+  assert.match(text, /交付展示（已按你意见修正）/)
+  assert.match(text, /首屏太朴素，改成深色科技风/)
+  assert.match(text, /重新做、并重新独立检查过（不是改完就算）/)
+  assert.match(text, /请再看一眼：这次符合你的预期了吗？/)
+  // 诚实红线：修正迭代同样完整跑验收，不出现任何「没验证」的表述
+  assert.doesNotMatch(text, /未验证|没检查/)
+})
+
+test('formatMingResult 修正迭代：交付展示带着修正请求，验证摘要照常展示', () => {
+  const text = formatMingResult({
+    success: true,
+    mode: 'executed',
+    summary: '已按意见调整首屏',
+    artifacts: ['D:\\out\\index.html'],
+    evidence: 'D:\\out\\evidence.json',
+    nextSteps: [],
+    recipe: '搭建个人网站',
+    planSummary: '',
+    verificationSummary: '【独立验证】通过 3 / 3',
+    acceptanceHealth: '',
+    revised: '首屏太朴素，改成深色科技风',
+  })
+  assert.match(text, /【独立验证】通过 3 \/ 3/)
+  assert.match(text, /已按你意见修正/)
+  assert.match(text, /请再看一眼/)
+})
+
 // ---------- 北极星 VTE ----------
 
 test('monthKeyOf 从 ISO 时间戳取月份键', () => {

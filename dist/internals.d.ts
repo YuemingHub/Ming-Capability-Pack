@@ -59,6 +59,12 @@ interface MingResult {
     verificationSummary: string;
     /** 验收健康度（该方案累计通过率，让用户看到信任层的累积数据） */
     acceptanceHealth: string;
+    /**
+     * 修正迭代标记：本次是「按用户意见修正后的迭代交付」时为用户修正请求原文；
+     * 正常首次交付为空字符串。非空时交付展示明确「已按你意见修正后重新做、重新验证」。
+     * 修正迭代同样完整跑验收，绝不因「改过了」跳过验证。
+     */
+    revised: string;
 }
 /** ming_history 单条历史记录 */
 interface HistoryEntry {
@@ -950,7 +956,7 @@ declare function installCapability(source: string): Promise<InstallOutcome>;
  */
 
 /**
- * 交付展示（交付体验层第 4 次对话）。
+ * 交付展示（交付体验层第 4 次对话；带 revision 时为修正迭代的第 5 次对话收尾）。
  *
  * 完成不是一句「搞定了」，而是「给你看」：产出数 + 独立检查 + 证据可回查 +
  * 把验收的判断权交还用户（请你过目）。参与感落在「我看懂了才说好」。

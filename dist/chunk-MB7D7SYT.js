@@ -2474,12 +2474,16 @@ function collectWorkflowArtifacts(result) {
 // src/tools/ming-auto.ts
 import { defineTool } from "@deepseek-ai/dsh-tools";
 function formatDeliveryReview(value) {
-  const lines = ["", "\u2500\u2500 \u4EA4\u4ED8\u5C55\u793A\uFF1A\u8BF7\u4F60\u8FC7\u76EE \u2500\u2500"];
+  const revised = Boolean(value.revised);
+  const lines = ["", revised ? "\u2500\u2500 \u4EA4\u4ED8\u5C55\u793A\uFF08\u5DF2\u6309\u4F60\u610F\u89C1\u4FEE\u6B63\uFF09\uFF1A\u8BF7\u4F60\u8FC7\u76EE \u2500\u2500" : "\u2500\u2500 \u4EA4\u4ED8\u5C55\u793A\uFF1A\u8BF7\u4F60\u8FC7\u76EE \u2500\u2500"];
+  if (value.revised) {
+    lines.push(`\u8FD9\u6B21\u6309\u4F60\u8BF4\u7684\u300C${value.revised}\u300D\u8C03\u6574\u540E\uFF0C\u91CD\u65B0\u505A\u3001\u5E76\u91CD\u65B0\u72EC\u7ACB\u68C0\u67E5\u8FC7\uFF08\u4E0D\u662F\u6539\u5B8C\u5C31\u7B97\uFF09\u3002`);
+  }
   lines.push(`\u6211\u505A\u4E86 ${value.artifacts.length} \u9879\u4EA7\u51FA\uFF0C${value.verificationSummary ? "\u5E76\u5DF2\u72EC\u7ACB\u68C0\u67E5\uFF08\u7EC6\u8282\u89C1\u4E0A\uFF09" : "\u5DF2\u4EA4\u4ED8"}\u3002`);
   if (value.evidence) {
     lines.push(`\u8BC1\u636E\u8BB0\u5F55\u53EF\u56DE\u67E5\uFF1A${value.evidence}`);
   }
-  lines.push("", "\u8BF7\u4F60\u770B\u4E00\u773C\u7ED3\u679C\uFF1A\u7B26\u5408\u4F60\u7684\u9884\u671F\u5417\uFF1F\u54EA\u91CC\u8981\u8C03\u6574\uFF1F\u76F4\u63A5\u544A\u8BC9\u6211\uFF0C\u6211\u9A6C\u4E0A\u6539\u3002");
+  lines.push("", revised ? "\u8BF7\u518D\u770B\u4E00\u773C\uFF1A\u8FD9\u6B21\u7B26\u5408\u4F60\u7684\u9884\u671F\u4E86\u5417\uFF1F\u8FD8\u8981\u8C03\u6574\u54EA\u91CC\uFF1F\u76F4\u63A5\u544A\u8BC9\u6211\u3002" : "\u8BF7\u4F60\u770B\u4E00\u773C\u7ED3\u679C\uFF1A\u7B26\u5408\u4F60\u7684\u9884\u671F\u5417\uFF1F\u54EA\u91CC\u8981\u8C03\u6574\uFF1F\u76F4\u63A5\u544A\u8BC9\u6211\uFF0C\u6211\u9A6C\u4E0A\u6539\u3002");
   return lines.join("\n");
 }
 function formatMingResult(value) {
@@ -2547,6 +2551,10 @@ function registerMingAutoTool(ctx) {
       workflowFrom: {
         type: "string",
         description: "\u53EF\u9009\uFF1A\u591A\u6B65\u5DE5\u4F5C\u6D41\u4ECE\u67D0\u4E00\u6B65\u7EE7\u7EED\uFF08\u8DF3\u8FC7\u4E4B\u524D\u7684\u6B65\u9AA4\uFF09\u3002\u5DE5\u4F5C\u6D41\u67D0\u6B65\u7F3A\u80FD\u529B\u88C5\u597D\u540E\uFF0C\u7528\u6237\u8BF4\u300C\u7EE7\u7EED\u300D\u65F6\u4F20\u5165\u5931\u8D25\u6B65\u7684 step id"
+      },
+      revision: {
+        type: "string",
+        description: "\u53EF\u9009\uFF1A\u7528\u6237\u5BF9\u4E0A\u6B21\u4EA4\u4ED8\u4E0D\u6EE1\u610F\u3001\u8981\u6C42\u4FEE\u6B63\u7684\u610F\u89C1\uFF08\u81EA\u7136\u8BED\u8A00\uFF09\u3002\u4F20\u5165\u65F6\u6309\u300C\u4FEE\u6B63\u8FED\u4EE3\u300D\u6267\u884C\uFF1A\u91CD\u65B0\u505A\u5E76\u91CD\u65B0\u72EC\u7ACB\u9A8C\u8BC1\uFF0C\u4EA4\u4ED8\u5C55\u793A\u660E\u786E\u300C\u5DF2\u6309\u4F60\u610F\u89C1\u4FEE\u6B63\u300D\u3002"
       }
     },
     output: {
@@ -2563,7 +2571,8 @@ function registerMingAutoTool(ctx) {
           recipe: { type: "string", required: true },
           planSummary: { type: "string", required: true },
           verificationSummary: { type: "string", required: true },
-          acceptanceHealth: { type: "string", required: true }
+          acceptanceHealth: { type: "string", required: true },
+          revised: { type: "string", required: true }
         }
       },
       render: (_args, value) => [{ type: "text", text: formatMingResult(value) }]
@@ -2593,7 +2602,7 @@ ${dispatch.summary}
           workflowFrom: args.workflowFrom,
           baseContext: contextual
         });
-        return workflowToResult(wfResult, plan, goal, resources, workdir);
+        return workflowToResult(wfResult, plan, goal, resources, workdir, args.revision);
       }
       const outcome = await execute(ctx, goal, resources, exec, { contextual });
       let verificationSummary = "";
@@ -2646,7 +2655,8 @@ ${dispatch.summary}
         recipe: plan.recipeName ?? "",
         planSummary: buildPlanSummary(plan),
         verificationSummary,
-        acceptanceHealth
+        acceptanceHealth,
+        revised: args.revision ?? ""
       };
       return result;
     }
@@ -2678,7 +2688,7 @@ function buildPlanSummary(plan) {
   }
   return parts.join("\uFF1B");
 }
-async function workflowToResult(wf, plan, goal, resources, workdir) {
+async function workflowToResult(wf, plan, goal, resources, workdir, revision) {
   const failedOutcome = wf.stepResults.find((r) => r.step.id === wf.failedStepId)?.outcome;
   const outcome = {
     mode: "executed",
@@ -2715,7 +2725,8 @@ async function workflowToResult(wf, plan, goal, resources, workdir) {
     recipe: plan.recipeName ?? "",
     planSummary: buildPlanSummary(plan),
     verificationSummary: workflowVerificationSummary(wf),
-    acceptanceHealth: await computeAcceptanceHealth(workdir, plan.recipeId)
+    acceptanceHealth: await computeAcceptanceHealth(workdir, plan.recipeId),
+    revised: revision ?? ""
   };
 }
 function workflowVerificationSummary(wf) {

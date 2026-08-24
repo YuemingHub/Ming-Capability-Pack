@@ -68,6 +68,12 @@ export interface MingResult {
   verificationSummary: string
   /** 验收健康度（该方案累计通过率，让用户看到信任层的累积数据） */
   acceptanceHealth: string
+  /**
+   * 修正迭代标记：本次是「按用户意见修正后的迭代交付」时为用户修正请求原文；
+   * 正常首次交付为空字符串。非空时交付展示明确「已按你意见修正后重新做、重新验证」。
+   * 修正迭代同样完整跑验收，绝不因「改过了」跳过验证。
+   */
+  revised: string
 }
 
 /** ming_history 单条历史记录 */

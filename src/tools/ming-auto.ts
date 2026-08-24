@@ -24,19 +24,25 @@ import { collectWorkflowArtifacts, runWorkflow, type WorkflowResult } from '../s
 import type { ExecutionOutcome, MingResult } from '../types.js'
 
 /**
- * 交付展示（交付体验层第 4 次对话）。
+ * 交付展示（交付体验层第 4 次对话；带 revision 时为修正迭代的第 5 次对话收尾）。
  *
  * 完成不是一句「搞定了」，而是「给你看」：产出数 + 独立检查 + 证据可回查 +
  * 把验收的判断权交还用户（请你过目）。参与感落在「我看懂了才说好」。
  * 纯函数；仅成功交付时展示（失败时用户需要的是坑位指引，不是复盘邀请）。
  */
 export function formatDeliveryReview(value: MingResult): string {
-  const lines: string[] = ['', '── 交付展示：请你过目 ──']
+  const revised = Boolean(value.revised)
+  const lines: string[] = ['', revised ? '── 交付展示（已按你意见修正）：请你过目 ──' : '── 交付展示：请你过目 ──']
+  if (value.revised) {
+    lines.push(`这次按你说的「${value.revised}」调整后，重新做、并重新独立检查过（不是改完就算）。`)
+  }
   lines.push(`我做了 ${value.artifacts.length} 项产出，${value.verificationSummary ? '并已独立检查（细节见上）' : '已交付'}。`)
   if (value.evidence) {
     lines.push(`证据记录可回查：${value.evidence}`)
   }
-  lines.push('', '请你看一眼结果：符合你的预期吗？哪里要调整？直接告诉我，我马上改。')
+  lines.push('', revised
+    ? '请再看一眼：这次符合你的预期了吗？还要调整哪里？直接告诉我。'
+    : '请你看一眼结果：符合你的预期吗？哪里要调整？直接告诉我，我马上改。')
   return lines.join('\n')
 }
 
@@ -118,6 +124,10 @@ export function registerMingAutoTool(ctx: Context): void {
         type: 'string',
         description: '可选：多步工作流从某一步继续（跳过之前的步骤）。工作流某步缺能力装好后，用户说「继续」时传入失败步的 step id',
       },
+      revision: {
+        type: 'string',
+        description: '可选：用户对上次交付不满意、要求修正的意见（自然语言）。传入时按「修正迭代」执行：重新做并重新独立验证，交付展示明确「已按你意见修正」。',
+      },
     },
 
     output: {
@@ -135,6 +145,7 @@ export function registerMingAutoTool(ctx: Context): void {
           planSummary: { type: 'string', required: true },
           verificationSummary: { type: 'string', required: true },
           acceptanceHealth: { type: 'string', required: true },
+          revised: { type: 'string', required: true },
         },
       },
       render: (_args, value) => [{ type: 'text', text: formatMingResult(value as MingResult) }],
@@ -148,6 +159,7 @@ export function registerMingAutoTool(ctx: Context): void {
         strategy?: 'mvp-first' | 'clarify-first'
         answers?: Record<string, string>
         workflowFrom?: string
+        revision?: string
       },
       exec,
     ) {
@@ -183,7 +195,7 @@ export function registerMingAutoTool(ctx: Context): void {
           workflowFrom: args.workflowFrom,
           baseContext: contextual,
         })
-        return workflowToResult(wfResult, plan, goal, resources, workdir)
+        return workflowToResult(wfResult, plan, goal, resources, workdir, args.revision)
       }
 
       // ③ 官方子代理执行（未命中方案时 contextual 为空，行为与旧版一致）
@@ -252,6 +264,7 @@ export function registerMingAutoTool(ctx: Context): void {
         planSummary: buildPlanSummary(plan),
         verificationSummary,
         acceptanceHealth,
+        revised: args.revision ?? '',
       }
 
       return result
@@ -296,6 +309,7 @@ async function workflowToResult(
   goal: string,
   resources: string[],
   workdir: string,
+  revision?: string,
 ): Promise<MingResult> {
   const failedOutcome = wf.stepResults.find(r => r.step.id === wf.failedStepId)?.outcome
   const outcome: ExecutionOutcome = {
@@ -341,6 +355,7 @@ async function workflowToResult(
     planSummary: buildPlanSummary(plan),
     verificationSummary: workflowVerificationSummary(wf),
     acceptanceHealth: await computeAcceptanceHealth(workdir, plan.recipeId),
+    revised: revision ?? '',
   }
 }
 
