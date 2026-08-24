@@ -899,6 +899,7 @@ async function dispatchMissingCapabilities(missingRefs, options = {}) {
           source: curated.source,
           trust: curated.trust,
           action: confirmed ? "installed" : "proposed",
+          state: confirmed ? "verified" : "pending",
           command,
           reason: confirmed ? curated.why : `${curated.why}\uFF1B\u4F46\u5B89\u88C5\u540E\u672A\u80FD\u786E\u8BA4\u5199\u5165\uFF08${result.detail ?? "\u672A\u77E5\u539F\u56E0"}\uFF09\u2014\u2014\u9700\u4EBA\u5DE5\u786E\u8BA4/\u91CD\u8BD5`
         });
@@ -908,6 +909,7 @@ async function dispatchMissingCapabilities(missingRefs, options = {}) {
           source: curated.source,
           trust: curated.trust,
           action: "proposed",
+          state: "pending",
           command,
           reason: curated.why
         });
@@ -921,6 +923,7 @@ async function dispatchMissingCapabilities(missingRefs, options = {}) {
         source: found.source,
         trust: "community",
         action: "proposed",
+        state: "pending",
         command: found.command ?? await buildCommand(found.source),
         reason: found.reason
       });
@@ -931,6 +934,7 @@ async function dispatchMissingCapabilities(missingRefs, options = {}) {
       source: "",
       trust: "community",
       action: "not-found",
+      state: "absent",
       reason: `\u5E02\u573A\u672A\u627E\u5230\u300C${ref.id}\u300D\u7684\u66FF\u4EE3\u5DE5\u5177`
     });
   }
@@ -1690,7 +1694,7 @@ function recipeCatalog() {
 
 // src/capabilities/protocol.ts
 var ACCEPTANCE_PROTOCOL_VERSION = 1;
-var SUPPORTED_CHECK_KINDS = /* @__PURE__ */ new Set(["file_exists", "content_match", "content_absent", "dir_nonempty"]);
+var SUPPORTED_CHECK_KINDS = /* @__PURE__ */ new Set(["file_exists", "content_match", "content_absent", "dir_nonempty", "browser_acceptance"]);
 function kindOf(check) {
   return check?.kind ?? "";
 }
@@ -1705,6 +1709,12 @@ function validateVerificationChecks(checks) {
     const kind = kindOf(check);
     if (!kind || !SUPPORTED_CHECK_KINDS.has(kind)) {
       errors.push({ path, message: `\u65AD\u8A00\u7C7B\u578B\u300C${kind || "\u7F3A\u5931"}\u300D\u4E0D\u5408\u6CD5` });
+      return;
+    }
+    if (check.kind === "browser_acceptance") {
+      if (typeof check.spec !== "string" || check.spec.trim() === "") {
+        errors.push({ path, message: "browser_acceptance \u7F3A\u5C11\u975E\u7A7A spec\uFF08JSON \u9A8C\u6536\u89C4\u683C\u8DEF\u5F84\uFF09" });
+      }
       return;
     }
     if (typeof check.pattern !== "string" || check.pattern.trim() === "") {
@@ -2019,9 +2029,88 @@ function formatClarify(status) {
   return lines.join("\n");
 }
 
+// src/services/browser-verify.ts
+import { spawn as spawn2 } from "child_process";
+import { access as access2 } from "fs/promises";
+import { join as join3 } from "path";
+async function probeDshVerify() {
+  try {
+    await access2("dsh-verify");
+    return true;
+  } catch {
+  }
+  const code = await new Promise((resolve2) => {
+    const child = spawn2("npx", ["--no-install", "dsh-verify", "--help"], { stdio: "ignore" });
+    const timer = setTimeout(() => {
+      try {
+        child.kill();
+      } catch {
+      }
+    }, 1e4);
+    child.on("error", () => {
+      clearTimeout(timer);
+      resolve2(null);
+    });
+    child.on("close", (c) => {
+      clearTimeout(timer);
+      resolve2(c);
+    });
+  });
+  return code === 0;
+}
+async function runBrowserAcceptance(spec, workdir, deps = {}) {
+  const probe = deps.probe ?? probeDshVerify;
+  const run = deps.run ?? (async (specPath2) => {
+    const result = await new Promise((resolve2) => {
+      const child = spawn2("npx", ["--yes", "dsh-verify", "--spec", specPath2], { cwd: workdir, stdio: ["ignore", "pipe", "pipe"] });
+      const timer = setTimeout(() => {
+        try {
+          child.kill();
+        } catch {
+        }
+      }, 12e4);
+      let output2 = "";
+      child.stdout?.on("data", (c) => {
+        output2 += String(c);
+      });
+      child.stderr?.on("data", (c) => {
+        output2 += String(c);
+      });
+      child.on("error", (err) => {
+        clearTimeout(timer);
+        resolve2({ code: null, output: `${output2}
+\u542F\u52A8 dsh-verify \u5931\u8D25\uFF1A${err.message}` });
+      });
+      child.on("close", (code2) => {
+        clearTimeout(timer);
+        resolve2({ code: code2, output: output2 });
+      });
+    });
+    return result;
+  });
+  if (!await probe()) {
+    return {
+      passed: false,
+      skipped: true,
+      detail: "\u6D4F\u89C8\u5668\u9A8C\u6536\u672A\u6267\u884C\uFF1A\u672C\u673A\u672A\u88C5\u914D dsh-verify\uFF08Witness\uFF09\u3002\u9700\u8981\u65F6\u7528 `dsh plugin add dsh-verify` \u88C5\u914D\u540E\u518D\u9A8C\u6536\u3002"
+    };
+  }
+  const specPath = join3(workdir, spec);
+  const { code, output } = await run(specPath);
+  const verdict = /FAIL/iu.test(output) ? "FAIL" : /PASS/iu.test(output) ? "PASS" : null;
+  const ok = code === 0 && verdict === "PASS";
+  if (ok) {
+    return { passed: true, detail: `\u771F\u5B9E\u6D4F\u89C8\u5668\u9A8C\u6536\u901A\u8FC7\uFF08PASS\uFF09\u2014\u2014${output.trim().split("\n")[0] || "spec \u5168\u90E8\u901A\u8FC7"}` };
+  }
+  return {
+    passed: false,
+    detail: `\u771F\u5B9E\u6D4F\u89C8\u5668\u9A8C\u6536\u672A\u901A\u8FC7\uFF08${verdict ?? `\u9000\u51FA\u7801 ${code ?? "\u672A\u77E5"}`}\uFF09\u3002\u56DE\u6267\u89C1\u8F93\u51FA\u524D\u51E0\u884C\uFF1A${output.trim().split("\n").slice(0, 3).join(" | ") || "\uFF08\u65E0\u8F93\u51FA\uFF09"}`
+  };
+}
+
 // src/capabilities/verifier.ts
 import { readdir as readdir2, readFile as readFile3, stat as stat2 } from "fs/promises";
-import { join as join3 } from "path";
+import { join as join4 } from "path";
 async function expandPattern(workdir, pattern, signal) {
   const trimmed = pattern.trim();
   const recursive = trimmed.startsWith("**/");
@@ -2036,7 +2125,7 @@ async function expandPattern(workdir, pattern, signal) {
       return;
     }
     for (const entry of entries) {
-      const full = join3(dir, entry.name);
+      const full = join4(dir, entry.name);
       const rel = full.slice(workdir.length + 1).replaceAll("\\", "/");
       if (entry.isDirectory()) {
         if (recursive) await walk(full, depth + 1);
@@ -2056,6 +2145,15 @@ function matchesSimplePattern(relPath, base) {
   return relPath.endsWith(suffix);
 }
 async function verifyOne2(check, workdir, signal) {
+  if (check.kind === "browser_acceptance") {
+    const outcome = await runBrowserAcceptance(check.spec, workdir);
+    return {
+      check,
+      passed: outcome.passed,
+      skipped: outcome.skipped,
+      detail: outcome.detail
+    };
+  }
   const files = await expandPattern(workdir, check.pattern, signal);
   switch (check.kind) {
     case "file_exists": {
@@ -2119,16 +2217,18 @@ async function verifyChecks(checks, workdir, signal) {
   for (const check of checks) {
     results.push(await verifyOne2(check, workdir, signal));
   }
-  return {
-    passed: results.filter((r) => r.passed).length,
-    failed: results.filter((r) => !r.passed).length,
-    results
-  };
+  const skipped = results.filter((r) => r.skipped).length;
+  const passed = results.filter((r) => r.passed).length;
+  const failed = results.length - passed - skipped;
+  return { passed, failed, skipped, results };
 }
 function formatVerification(summary) {
   if (summary.results.length === 0) return "";
-  const lines = summary.results.map((r) => `${r.passed ? "\u2705" : "\u274C"} ${describeCheck(r.check)}\uFF1A${r.detail}`);
-  return `\u3010\u72EC\u7ACB\u9A8C\u8BC1\u3011\u901A\u8FC7 ${summary.passed} / ${summary.failed + summary.passed}
+  const lines = summary.results.map(
+    (r) => r.skipped ? `\u23ED\uFE0F ${describeCheck(r.check)}\uFF1A${r.detail}` : `${r.passed ? "\u2705" : "\u274C"} ${describeCheck(r.check)}\uFF1A${r.detail}`
+  );
+  const skipNote = summary.skipped > 0 ? `\uFF08\u8DF3\u8FC7 ${summary.skipped} \u9879\u2014\u2014\u5916\u90E8\u9A8C\u6536\u80FD\u529B\u672A\u88C5\u914D\uFF0C\u672A\u6267\u884C\uFF09` : "";
+  return `\u3010\u72EC\u7ACB\u9A8C\u8BC1\u3011\u901A\u8FC7 ${summary.passed} / ${summary.failed + summary.passed}${skipNote}
 ${lines.join("\n")}`;
 }
 function describeCheck(check) {
@@ -2141,6 +2241,8 @@ function describeCheck(check) {
       return `\u68C0\u67E5\u300C${check.pattern}\u300D\u4E0D\u542B\u300C${check.mustNotContain}\u300D`;
     case "dir_nonempty":
       return `\u68C0\u67E5\u76EE\u5F55\u300C${check.pattern}\u300D\u975E\u7A7A`;
+    case "browser_acceptance":
+      return `\u771F\u5B9E\u6D4F\u89C8\u5668\u9A8C\u6536\u300C${check.spec}\u300D`;
   }
 }
 function matchesSimplePatternForTest(relPath, base) {
@@ -2150,12 +2252,12 @@ function matchesSimplePatternForTest(relPath, base) {
 // src/services/evidence-collector.ts
 import { createHash } from "crypto";
 import { mkdir as mkdir2, writeFile } from "fs/promises";
-import { join as join4 } from "path";
+import { join as join5 } from "path";
 function hashGoal(goal) {
   return createHash("sha256").update(goal, "utf-8").digest("hex");
 }
 async function writeEvidence(payload) {
-  const dir = join4(payload.workdir, "ming-evidence");
+  const dir = join5(payload.workdir, "ming-evidence");
   await mkdir2(dir, { recursive: true });
   const id = `evidence-${Date.now()}`;
   const card = {
@@ -2166,7 +2268,7 @@ async function writeEvidence(payload) {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
     ...payload
   };
-  const filepath = join4(dir, `${id}.json`);
+  const filepath = join5(dir, `${id}.json`);
   await writeFile(filepath, JSON.stringify(card, null, 2), "utf-8");
   return { path: filepath, id };
 }
@@ -2673,6 +2775,8 @@ export {
   formatStrategyOptions,
   clarifyStatus,
   formatClarify,
+  probeDshVerify,
+  runBrowserAcceptance,
   verifyChecks,
   formatVerification,
   matchesSimplePatternForTest,

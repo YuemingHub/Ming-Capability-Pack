@@ -31,6 +31,7 @@ export { assembleContext } from './capabilities/assembler.js'
 export { resolveCapabilities } from './capabilities/resolver.js'
 export { planExecution, formatStrategyOptions, clarifyStatus, formatClarify, resolveAnswers, STRATEGY_OPTIONS } from './capabilities/planner.js'
 export { findRecipesByGoal, getRecipe, recipeCatalog, RECIPES } from './capabilities/recipes.js'
+export { exportRecipeToSkillMd } from './capabilities/skill-md.js'
 export {
   CURATED_CAPABILITIES,
   dispatchMissingCapabilities,
@@ -39,6 +40,7 @@ export {
   type DispatchEntry,
   type DispatchOptions,
   type DispatchResult,
+  type DispatchState,
 } from './capabilities/dispatch.js'
 export { buildRecommendationReason, rankCandidates, suggestQueryFor, tokensOf, type RecommendContext, type ScoredCandidate } from './capabilities/recommend.js'
 export { matchesSimplePatternForTest, verifyChecks, formatVerification } from './capabilities/verifier.js'
@@ -70,6 +72,7 @@ export {
 } from './services/installer.js'
 export { formatMingResult } from './tools/ming-auto.js'
 export { hashGoal, writeEvidence } from './services/evidence-collector.js'
+export { probeDshVerify, runBrowserAcceptance, type BrowserVerifyDeps, type BrowserVerifyResult } from './services/browser-verify.js'
 export type {
   ArtifactCheck,
   ErrorKind,

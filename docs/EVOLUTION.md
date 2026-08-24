@@ -10,7 +10,37 @@
 
 ---
 
-## 当前（进行中）: 验收协议 v1 — 可信交付层地基
+## 当前（进行中）: 战略收窄——从「能力包」到「方案层 + 交付体验层」
+
+**时间**：2026-08-24
+
+**背景**：对照 GitHub 生态做了一次诚实的盘底（`docs/ECOSYSTEM.md`）：
+- 宿主 `deepseek-harness` 已原生提供插件/子代理/市场/安装；
+- Agent Skills（SKILL.md）已成跨宿主技能包标准；
+- 验证/质量门已是热门赛道（kimi-atlas 6-lens 确定性验证、supervisorLLM、dsh-verify、dsh-stage-gate 等）；
+- 能力装配有 `dsh-plugin-autoevo`（Resolve→Search→Review→Deploy→Verify→Upgrade，成熟度远超本插件 dispatch）。
+
+**关键决策**：
+1. 项目定位收窄为「**DSH 上的方案层 + 交付体验层**」——不造宿主与生态已有的，只保留三块差异点：①自然语言→方案分流；②方案级验收协议 + 证据卡 + VTE；③小白交付体验。
+2. **装配薄化（P1）**：`dispatch` 保持「轻装配」入口（curated 快查 + 一条命令能装上的市场候选），只对齐 autoevo 的诚信核心（未验证不报已装），不重复实现重型审查流程；`DispatchEntry.state` 状态机化（verified/pending/absent）。
+3. **方案出口对齐 SKILL.md（P2）**：新增 `skill-md.ts` 纯函数 `exportRecipeToSkillMd`，内置方案可一键导出为标准 Agent Skill；内部匹配规则/验收协议保留私有（那是差异化资产）。
+4. **吸收 dsh-verify（P3）**：verification 新增 `browser_acceptance` 断言——真实浏览器验收（JSON spec → Chromium → PASS/FAIL），本机未装配时**如实标记 skipped**（不谎报通过、不计失败、不阻塞交付）。
+
+**为什么这么做**：
+- 之前「什么都能做的能力包」定位在生态里是重复造轮子；收窄后每一个功能点都经得起「生态里有没有」的拷问。
+- 浏览器级验收是「可信交付层」的最后一公里——文件断言验证不了「按钮点了有没有反应」，dsh-verify 正好补上，且不必自研。
+
+**Tradeoff**：
+- 选择了「对齐 + 吸收」而不是「运行时依赖」：autoevo / dsh-verify 均为低 star 未充分验证的项目，只参考其理念与调用方式，关键路径不设硬依赖。
+- `browser_acceptance` 选择了 skipped（跳过）语义而不是失败/必装：诚实红线（跳过≠通过，明确标注「未执行」）与「不阻塞第一版交付」两条原则都保住；代价是缺失时验收是「部分完成」。
+- 现有内置 web 方案暂不启用 `browser_acceptance`（机制就位，启用与否是产品决策，留给后续）；避免在无 dsh-verify 的默认环境改变既有验收语义。
+- 方案包的 SKILL.md 出口第一版只做「生成文本」，不做目录/资源文件的整套打包（YAGNI）。
+
+**测试**：全量 172/172 通过（基线 161 + dispatch 状态机 1 + skill-md 5 + browser-verify 5）。
+
+---
+
+## v0.9.1: 验收协议 v1 — 可信交付层地基
 
 **时间**：2026-08-23
 

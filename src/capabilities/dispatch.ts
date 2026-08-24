@@ -12,6 +12,11 @@
  *
  * 安全边界：自动安装只对内置的官方/bundled 来源开放；市场与 github 社区插件
  * 一律走到「一句确认」，绝不在未经确认时安装第三方代码。
+ *
+ * 与生态的分工（避免重复造轮子）：本插件只做「轻装配」入口——curated 快查 +
+ * 一条命令真能装上的市场候选，面向小白用户保持轻量。重型能力装配（先查本地 →
+ * 多候选审查 → 隔离试用 → 独立语义验证 → 升级回填）由社区插件 dsh-plugin-autoevo
+ * 承担；本模块只对齐其核心诚信原则（未经验证不报已装），不重复实现重型流程。
  */
 
 import type { CapabilityRef } from './types.js'
@@ -50,6 +55,15 @@ export const CURATED_CAPABILITIES: CuratedCapability[] = [
 
 export type DispatchAction = 'installed' | 'proposed' | 'not-found'
 
+/**
+ * 装配状态（机器可读，对齐 autoevo 的安装状态机语义，供下游精确判断）：
+ * - verified：已安装且已在 profile 层面确认写入（对应 autoevo 的 verified）
+ * - pending：尚未验证通过——社区源等用户一句确认 / 官方源装完但未能确认写入（对应 autoevo 的 pending）
+ * - absent：市场也没有替代（对应 autoevo 的 failed_absent）
+ * 绝不在 verified 之外报「已装好」（诚信红线：只有确认写入才敢说 installed）。
+ */
+export type DispatchState = 'verified' | 'pending' | 'absent'
+
 export interface DispatchEntry {
   ref: CapabilityRef
   /** 选定的最佳来源（如 dsh-office-tools / github:owner/repo / 市场插件名） */
@@ -57,6 +71,8 @@ export interface DispatchEntry {
   trust: 'bundled' | 'official' | 'community'
   /** installed=已自动安装；proposed=社区源待一句确认；not-found=市场也没有 */
   action: DispatchAction
+  /** 精确装配状态（与 action 对应：installed→verified；proposed→pending；not-found→absent） */
+  state: DispatchState
   /** 安装命令（installed/proposed 时有） */
   command?: string
   /** 为什么选它（人话） */
@@ -199,6 +215,7 @@ export async function dispatchMissingCapabilities(
           source: curated.source,
           trust: curated.trust,
           action: confirmed ? 'installed' : 'proposed',
+          state: confirmed ? 'verified' : 'pending',
           command,
           reason: confirmed
             ? curated.why
@@ -210,6 +227,7 @@ export async function dispatchMissingCapabilities(
           source: curated.source,
           trust: curated.trust,
           action: 'proposed',
+          state: 'pending',
           command,
           reason: curated.why,
         })
@@ -224,6 +242,7 @@ export async function dispatchMissingCapabilities(
         source: found.source,
         trust: 'community',
         action: 'proposed',
+        state: 'pending',
         command: found.command ?? (await buildCommand(found.source)),
         reason: found.reason,
       })
@@ -235,6 +254,7 @@ export async function dispatchMissingCapabilities(
       source: '',
       trust: 'community',
       action: 'not-found',
+      state: 'absent',
       reason: `市场未找到「${ref.id}」的替代工具`,
     })
   }

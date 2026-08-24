@@ -87,9 +87,33 @@ test('官方源安装后未能确认写入：绝不谎报已自动安装', async
   })
   assert.equal(installed, '@deepseek-ai/dsh-base')
   assert.equal(result.entries[0].action, 'proposed') // 未确认生效 → 待确认，不报 installed
+  assert.equal(result.entries[0].state, 'pending') // 状态机：pending，绝不 verified
   assert.equal(result.installedCount, 0)
   assert.match(result.entries[0].reason, /未能确认写入/)
   assert.doesNotMatch(result.summary, /已自动安装/)
+})
+
+test('装配状态机：verified/pending/absent 与 action 一一对应', async () => {
+  // verified：官方源安装且确认写入
+  const verified = await dispatchMissingCapabilities([ref('infra_ops', '运维')], {
+    install: async () => ({ ok: true, confirmed: true }),
+  })
+  assert.equal(verified.entries[0].state, 'verified')
+  assert.equal(verified.entries[0].action, 'installed')
+
+  // pending：社区源一句确认 / 官方源装完未确认
+  const pending = await dispatchMissingCapabilities([ref('publish_deploy', '发布')], {
+    install: async () => ({ ok: true }),
+  })
+  assert.equal(pending.entries[0].state, 'pending')
+  assert.equal(pending.entries[0].action, 'proposed')
+
+  // absent：市场没有替代
+  const absent = await dispatchMissingCapabilities([ref('exotic-skill', '稀有能力')], {
+    search: async () => ({ ok: true, query: 'exotic', total: 0, plugins: [] }),
+  })
+  assert.equal(absent.entries[0].state, 'absent')
+  assert.equal(absent.entries[0].action, 'not-found')
 })
 
 test('curated 库覆盖常见能力缺口，含官方来源与真实市场工具', () => {

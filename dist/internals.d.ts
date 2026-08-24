@@ -151,6 +151,13 @@ type VerificationCheck = {
     kind: 'dir_nonempty';
     pattern: string;
     note?: string;
+} | {
+    /** 真实浏览器验收（对接 dsh-verify：JSON spec → 真实 Chromium → PASS/FAIL）。
+     *  spec 为 dsh-verify 规格 JSON 的文件路径（相对工作区）或 URL。
+     *  可选增强：本机未装配 dsh-verify 时该断言如实标记 skipped（不谎报通过、也不阻塞交付）。 */
+    kind: 'browser_acceptance';
+    spec: string;
+    note?: string;
 };
 /**
  * 质量门槛：Ming 替用户定义「什么算好」。
@@ -279,10 +286,14 @@ interface VerificationResult {
     passed: boolean;
     /** 人类可读的证据细节（匹配到哪些文件 / 为什么失败） */
     detail: string;
+    /** 是否跳过（如实标记：断言所依赖的外部能力未装配，如 dsh-verify；跳过不算失败，也不谎报通过） */
+    skipped?: boolean;
 }
 interface VerificationSummary {
     passed: number;
     failed: number;
+    /** 跳过的断言数（未执行的外部依赖验收，如浏览器验收缺 dsh-verify；不计入 pass/fail） */
+    skipped: number;
     results: VerificationResult[];
 }
 
@@ -401,6 +412,11 @@ declare function formatStoreResult(result: StoreSearchResult, max?: number): str
  *
  * 安全边界：自动安装只对内置的官方/bundled 来源开放；市场与 github 社区插件
  * 一律走到「一句确认」，绝不在未经确认时安装第三方代码。
+ *
+ * 与生态的分工（避免重复造轮子）：本插件只做「轻装配」入口——curated 快查 +
+ * 一条命令真能装上的市场候选，面向小白用户保持轻量。重型能力装配（先查本地 →
+ * 多候选审查 → 隔离试用 → 独立语义验证 → 升级回填）由社区插件 dsh-plugin-autoevo
+ * 承担；本模块只对齐其核心诚信原则（未经验证不报已装），不重复实现重型流程。
  */
 
 interface CuratedCapability {
@@ -420,6 +436,14 @@ interface CuratedCapability {
  */
 declare const CURATED_CAPABILITIES: CuratedCapability[];
 type DispatchAction = 'installed' | 'proposed' | 'not-found';
+/**
+ * 装配状态（机器可读，对齐 autoevo 的安装状态机语义，供下游精确判断）：
+ * - verified：已安装且已在 profile 层面确认写入（对应 autoevo 的 verified）
+ * - pending：尚未验证通过——社区源等用户一句确认 / 官方源装完但未能确认写入（对应 autoevo 的 pending）
+ * - absent：市场也没有替代（对应 autoevo 的 failed_absent）
+ * 绝不在 verified 之外报「已装好」（诚信红线：只有确认写入才敢说 installed）。
+ */
+type DispatchState = 'verified' | 'pending' | 'absent';
 interface DispatchEntry {
     ref: CapabilityRef;
     /** 选定的最佳来源（如 dsh-office-tools / github:owner/repo / 市场插件名） */
@@ -427,6 +451,8 @@ interface DispatchEntry {
     trust: 'bundled' | 'official' | 'community';
     /** installed=已自动安装；proposed=社区源待一句确认；not-found=市场也没有 */
     action: DispatchAction;
+    /** 精确装配状态（与 action 对应：installed→verified；proposed→pending；not-found→absent） */
+    state: DispatchState;
     /** 安装命令（installed/proposed 时有） */
     command?: string;
     /** 为什么选它（人话） */
@@ -689,6 +715,28 @@ declare function getRecipe(id: string): Recipe | undefined;
 declare function recipeCatalog(): Array<Pick<Recipe, 'id' | 'name' | 'description' | 'triggers'>>;
 
 /**
+ * 方案包 → Agent Skills（SKILL.md）出口
+ *
+ * 把 Ming 的内置方案包（Recipe）导出为跨宿主标准的 Agent Skill（SKILL.md）：
+ * 一个文件夹 + SKILL.md（frontmatter name/description + 指令 + 资源），
+ * Claude Code / Codex / Gemini CLI 等都能直接加载。
+ *
+ * 为什么做（不重复造轮子）：技能包载体生态已有事实标准（agentskills.io），
+ * 方案包不该锁死在私有格式里；对齐标准后，Ming 策展的方案可以一键导出、
+ * 在任何支持 Agent Skills 的宿主里复用。内部匹配规则（triggers）、验收断言
+ * （verification）、质量门槛（qualityBar）是 Ming 的独有资产，保留在 Recipe 内部；
+ * 本模块只负责把它们表达成标准 SKILL.md 的「指令 + 自查」形态。
+ */
+
+/**
+ * 把方案包导出为标准 SKILL.md 文本。
+ * 纯函数、零副作用；不修改 Recipe。frontmatter 只含规范最小必填
+ * （name + description），正文按「何时使用 / 执行指引 / 能力要求 /
+ * 质量门槛 / 交付前自查 / 验收断言」组织，便于任意 agent 直接消费。
+ */
+declare function exportRecipeToSkillMd(recipe: Recipe): string;
+
+/**
  * 能力推荐引擎（痛点 2：用户不知道需要什么，「眼花缭乱」）
  *
  * 不做「把一堆插件甩给用户」，而是按「用户的目标 + 已确认的方向」把候选排序，
@@ -947,4 +995,37 @@ interface EvidenceFile {
 }
 declare function writeEvidence(payload: EvidencePayload): Promise<EvidenceFile>;
 
-export { ACCEPTANCE_PROTOCOL_VERSION, type AcceptanceRecord, type AcceptanceSummary, type ArtifactCheck, CURATED_CAPABILITIES, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type CuratedCapability, type DispatchAction, type DispatchEntry, type DispatchOptions, type DispatchResult, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MarketplacePlugin, type MingResult, type ParsedInstallCommand, type Pitfall, type ProtocolValidationError, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendAcceptanceRecord, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, computeVte, computeVteTrend, dispatchMissingCapabilities, dshBinCandidates, extractArtifacts, failedKindsOf, findRecipesByGoal, formatAcceptance, formatClarify, formatMingResult, formatProtocolErrors, formatStoreResult, formatStrategyOptions, formatVerification, formatVte, getRecipe, hashGoal, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, monthKeyOf, nextStepsFor, parseInstallCommand, planExecution, profileDirsOf, rankCandidates, readAcceptanceHistory, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runDshInstall, runWorkflow, searchMarketplacePlugins, searchStorePlugins, stopReasonText, suggestQueryFor, summarizeAcceptance, tokensOf, validateQualityBar, validateRecipeProtocol, validateVerificationChecks, verifyChecks, workflowNextSteps, writeEvidence };
+/**
+ * 真实浏览器验收（browser_acceptance 断言执行器）
+ *
+ * 对接社区工具 dsh-verify（Witness）：JSON spec → 真实 Chromium → PASS/FAIL 与
+ * 截图 receipts——「The browser is the judge」，不靠 agent 自我宣称，也不靠 LLM 判分。
+ *
+ * 为什么对接而不是自研（不重复造轮子）：生态已有成熟实现（CLI + MCP + GitHub Action），
+ * 本模块只做三件薄事：
+ *   1. 探测本机是否可用（dsh-verify 或 npx 可拉取）；
+ *   2. 可用 → 执行 spec 并解析 PASS/FAIL；
+ *   3. 不可用 → 如实返回 skipped（不谎报通过，也不阻塞第一版交付）。
+ * 诚实红线：未执行就是未执行，绝不把「跳过」当「通过」。
+ */
+interface BrowserVerifyResult {
+    passed: boolean;
+    /** 未执行（dsh-verify 不可用）时为 true；此时 passed 恒为 false */
+    skipped?: boolean;
+    detail: string;
+}
+interface BrowserVerifyDeps {
+    /** 探测 dsh-verify 是否可用（测试可注入；缺省走真实探测） */
+    probe?: () => Promise<boolean>;
+    /** 执行 dsh-verify 并返回标准输出（测试可注入；缺省 spawn 真实 CLI） */
+    run?: (specPath: string) => Promise<{
+        code: number | null;
+        output: string;
+    }>;
+}
+/** 探测 dsh-verify 可用性：PATH 里的 dsh-verify 优先，其次 npx 全局缓存 */
+declare function probeDshVerify(): Promise<boolean>;
+/** 执行一次浏览器验收：spec 相对路径基于 workdir 解析；输出按「PASS/FAIL 关键字 + 退出码」判定 */
+declare function runBrowserAcceptance(spec: string, workdir: string, deps?: BrowserVerifyDeps): Promise<BrowserVerifyResult>;
+
+export { ACCEPTANCE_PROTOCOL_VERSION, type AcceptanceRecord, type AcceptanceSummary, type ArtifactCheck, type BrowserVerifyDeps, type BrowserVerifyResult, CURATED_CAPABILITIES, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type CuratedCapability, type DispatchAction, type DispatchEntry, type DispatchOptions, type DispatchResult, type DispatchState, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MarketplacePlugin, type MingResult, type ParsedInstallCommand, type Pitfall, type ProtocolValidationError, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendAcceptanceRecord, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, computeVte, computeVteTrend, dispatchMissingCapabilities, dshBinCandidates, exportRecipeToSkillMd, extractArtifacts, failedKindsOf, findRecipesByGoal, formatAcceptance, formatClarify, formatMingResult, formatProtocolErrors, formatStoreResult, formatStrategyOptions, formatVerification, formatVte, getRecipe, hashGoal, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, monthKeyOf, nextStepsFor, parseInstallCommand, planExecution, probeDshVerify, profileDirsOf, rankCandidates, readAcceptanceHistory, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runBrowserAcceptance, runDshInstall, runWorkflow, searchMarketplacePlugins, searchStorePlugins, stopReasonText, suggestQueryFor, summarizeAcceptance, tokensOf, validateQualityBar, validateRecipeProtocol, validateVerificationChecks, verifyChecks, workflowNextSteps, writeEvidence };

@@ -7,6 +7,7 @@
 
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
+import { runBrowserAcceptance } from '../services/browser-verify.js'
 import type { VerificationCheck, VerificationResult, VerificationSummary } from './types.js'
 
 /** 简单 glob 展开：支持星号、双星、后缀通配（例如 *.ext、双星递归），第一刀不覆盖复杂通配 */
@@ -49,6 +50,17 @@ function matchesSimplePattern(relPath: string, base: string): boolean {
 }
 
 async function verifyOne(check: VerificationCheck, workdir: string, signal?: AbortSignal): Promise<VerificationResult> {
+  // browser_acceptance 不依赖本地文件 glob，直接走真实浏览器验收（dsh-verify）
+  if (check.kind === 'browser_acceptance') {
+    const outcome = await runBrowserAcceptance(check.spec, workdir)
+    return {
+      check,
+      passed: outcome.passed,
+      skipped: outcome.skipped,
+      detail: outcome.detail,
+    }
+  }
+
   const files = await expandPattern(workdir, check.pattern, signal)
 
   switch (check.kind) {
@@ -120,18 +132,23 @@ export async function verifyChecks(
   for (const check of checks) {
     results.push(await verifyOne(check, workdir, signal))
   }
-  return {
-    passed: results.filter(r => r.passed).length,
-    failed: results.filter(r => !r.passed).length,
-    results,
-  }
+  const skipped = results.filter(r => r.skipped).length
+  const passed = results.filter(r => r.passed).length
+  // 跳过的断言不计入失败（否则会误阻断交付）；但也不会计为通过（不谎报）
+  const failed = results.length - passed - skipped
+  return { passed, failed, skipped, results }
 }
 
 /** 人类可读的验证摘要（追加到结果里给人/模型看） */
 export function formatVerification(summary: VerificationSummary): string {
   if (summary.results.length === 0) return ''
-  const lines = summary.results.map(r => `${r.passed ? '✅' : '❌'} ${describeCheck(r.check)}：${r.detail}`)
-  return `【独立验证】通过 ${summary.passed} / ${summary.failed + summary.passed}\n${lines.join('\n')}`
+  const lines = summary.results.map(r =>
+    r.skipped
+      ? `⏭️ ${describeCheck(r.check)}：${r.detail}`
+      : `${r.passed ? '✅' : '❌'} ${describeCheck(r.check)}：${r.detail}`,
+  )
+  const skipNote = summary.skipped > 0 ? `（跳过 ${summary.skipped} 项——外部验收能力未装配，未执行）` : ''
+  return `【独立验证】通过 ${summary.passed} / ${summary.failed + summary.passed}${skipNote}\n${lines.join('\n')}`
 }
 
 function describeCheck(check: VerificationCheck): string {
@@ -144,6 +161,8 @@ function describeCheck(check: VerificationCheck): string {
       return `检查「${check.pattern}」不含「${check.mustNotContain}」`
     case 'dir_nonempty':
       return `检查目录「${check.pattern}」非空`
+    case 'browser_acceptance':
+      return `真实浏览器验收「${check.spec}」`
   }
 }
 

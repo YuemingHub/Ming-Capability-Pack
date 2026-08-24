@@ -20,7 +20,7 @@ import type { QualityBar, Recipe, VerificationCheck } from './types.js'
 export const ACCEPTANCE_PROTOCOL_VERSION = 1
 
 /** 当前协议支持的所有断言类型 */
-const SUPPORTED_CHECK_KINDS = new Set(['file_exists', 'content_match', 'content_absent', 'dir_nonempty'])
+const SUPPORTED_CHECK_KINDS = new Set(['file_exists', 'content_match', 'content_absent', 'dir_nonempty', 'browser_acceptance'])
 
 /** 协议校验失败的一处问题：定位 + 人话原因 */
 export interface ProtocolValidationError {
@@ -53,6 +53,14 @@ export function validateVerificationChecks(checks: VerificationCheck[]): Protoco
     if (!kind || !SUPPORTED_CHECK_KINDS.has(kind)) {
       errors.push({ path, message: `断言类型「${kind || '缺失'}」不合法` })
       return // 类型不合法，不再检查后续字段
+    }
+
+    // browser_acceptance 用 spec（文件路径/URL）而非 pattern；其余断言必须非空 pattern
+    if (check.kind === 'browser_acceptance') {
+      if (typeof check.spec !== 'string' || check.spec.trim() === '') {
+        errors.push({ path, message: 'browser_acceptance 缺少非空 spec（JSON 验收规格路径）' })
+      }
+      return
     }
 
     if (typeof check.pattern !== 'string' || check.pattern.trim() === '') {

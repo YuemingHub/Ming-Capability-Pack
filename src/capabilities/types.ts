@@ -31,6 +31,14 @@ export type VerificationCheck =
   | { kind: 'content_match'; pattern: string; contains: string; note?: string }
   | { kind: 'content_absent'; pattern: string; mustNotContain: string; note?: string }
   | { kind: 'dir_nonempty'; pattern: string; note?: string }
+  | {
+      /** 真实浏览器验收（对接 dsh-verify：JSON spec → 真实 Chromium → PASS/FAIL）。
+       *  spec 为 dsh-verify 规格 JSON 的文件路径（相对工作区）或 URL。
+       *  可选增强：本机未装配 dsh-verify 时该断言如实标记 skipped（不谎报通过、也不阻塞交付）。 */
+      kind: 'browser_acceptance'
+      spec: string
+      note?: string
+    }
 
 /**
  * 质量门槛：Ming 替用户定义「什么算好」。
@@ -164,11 +172,15 @@ export interface VerificationResult {
   passed: boolean
   /** 人类可读的证据细节（匹配到哪些文件 / 为什么失败） */
   detail: string
+  /** 是否跳过（如实标记：断言所依赖的外部能力未装配，如 dsh-verify；跳过不算失败，也不谎报通过） */
+  skipped?: boolean
 }
 
 export interface VerificationSummary {
   passed: number
   failed: number
+  /** 跳过的断言数（未执行的外部依赖验收，如浏览器验收缺 dsh-verify；不计入 pass/fail） */
+  skipped: number
   results: VerificationResult[]
 }
 
