@@ -21,7 +21,7 @@ import {
   searchStorePlugins,
   summarizeAcceptance,
   writeEvidence
-} from "./chunk-W7JQWAQH.js";
+} from "./chunk-QFSBI2LI.js";
 
 // src/tools/ming-acceptance.ts
 import { defineTool } from "@deepseek-ai/dsh-tools";

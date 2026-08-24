@@ -9,6 +9,7 @@ import {
   computeVteTrend,
   failedKindsOf,
   formatAcceptance,
+  formatDeliveryReview,
   formatMingResult,
   formatVte,
   monthKeyOf,
@@ -168,6 +169,8 @@ test('formatMingResult 在本次验证后展示对应方案的累计健康度', 
   assert.match(text, /【独立验证】通过 3 \/ 3/)
   assert.match(text, /验收健康度（按方案聚合）/)
   assert.match(text, /搭建个人网站：2 次运行，通过率 100%/)
+  assert.match(text, /── 交付展示：请你过目 ──/)
+  assert.match(text, /请你看一眼结果：符合你的预期吗？/)
 })
 
 test('formatMingResult 无验收历史时不展示健康度区块', () => {
@@ -185,6 +188,62 @@ test('formatMingResult 无验收历史时不展示健康度区块', () => {
   })
 
   assert.equal(text, '任务完成')
+})
+
+// ---------- formatDeliveryReview：交付展示（第 4 次对话） ----------
+
+test('formatDeliveryReview 展示产出数、独立检查与证据可回查，并邀请用户过目', () => {
+  const text = formatDeliveryReview({
+    success: true,
+    mode: 'executed',
+    summary: '任务完成',
+    artifacts: ['D:\\out\\index.html', 'D:\\out\\style.css'],
+    evidence: 'D:\\out\\evidence.json',
+    nextSteps: [],
+    recipe: '搭建个人网站',
+    planSummary: '',
+    verificationSummary: '【独立验证】通过 3 / 3',
+    acceptanceHealth: '',
+  })
+  assert.match(text, /── 交付展示：请你过目 ──/)
+  assert.match(text, /我做了 2 项产出，并已独立检查/)
+  assert.match(text, /证据记录可回查：D:\\out\\evidence\.json/)
+  assert.match(text, /请你看一眼结果：符合你的预期吗？哪里要调整？/)
+})
+
+test('formatDeliveryReview 无独立验证时如实说「已交付」而不谎称检查过', () => {
+  const text = formatDeliveryReview({
+    success: true,
+    mode: 'executed',
+    summary: '任务完成',
+    artifacts: ['D:\\out\\a.txt'],
+    evidence: '',
+    nextSteps: [],
+    recipe: '',
+    planSummary: '',
+    verificationSummary: '',
+    acceptanceHealth: '',
+  })
+  assert.match(text, /我做了 1 项产出，已交付/)
+  assert.doesNotMatch(text, /独立检查/)
+  assert.doesNotMatch(text, /证据记录可回查/)
+})
+
+test('formatMingResult 失败任务不展示交付展示（用户需要的是坑位指引，不是复盘邀请）', () => {
+  const text = formatMingResult({
+    success: false,
+    mode: 'executed',
+    summary: '执行失败：能力缺失',
+    artifacts: [],
+    evidence: '',
+    nextSteps: ['先装配 dsh-univer-office 再重试'],
+    recipe: '',
+    planSummary: '',
+    verificationSummary: '',
+    acceptanceHealth: '',
+  })
+  assert.doesNotMatch(text, /交付展示/)
+  assert.match(text, /先装配 dsh-univer-office 再重试/)
 })
 
 // ---------- 北极星 VTE ----------

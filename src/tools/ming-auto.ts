@@ -23,6 +23,23 @@ import { appendMissingNotice, nextStepsFor, workflowNextSteps } from '../service
 import { collectWorkflowArtifacts, runWorkflow, type WorkflowResult } from '../services/workflow.js'
 import type { ExecutionOutcome, MingResult } from '../types.js'
 
+/**
+ * 交付展示（交付体验层第 4 次对话）。
+ *
+ * 完成不是一句「搞定了」，而是「给你看」：产出数 + 独立检查 + 证据可回查 +
+ * 把验收的判断权交还用户（请你过目）。参与感落在「我看懂了才说好」。
+ * 纯函数；仅成功交付时展示（失败时用户需要的是坑位指引，不是复盘邀请）。
+ */
+export function formatDeliveryReview(value: MingResult): string {
+  const lines: string[] = ['', '── 交付展示：请你过目 ──']
+  lines.push(`我做了 ${value.artifacts.length} 项产出，${value.verificationSummary ? '并已独立检查（细节见上）' : '已交付'}。`)
+  if (value.evidence) {
+    lines.push(`证据记录可回查：${value.evidence}`)
+  }
+  lines.push('', '请你看一眼结果：符合你的预期吗？哪里要调整？直接告诉我，我马上改。')
+  return lines.join('\n')
+}
+
 /** 把规范结果渲染成给用户/模型看的中文文本 */
 export function formatMingResult(value: MingResult): string {
   const lines: string[] = [value.summary]
@@ -51,6 +68,11 @@ export function formatMingResult(value: MingResult): string {
   if (value.nextSteps.length > 0) {
     lines.push('', '接下来：')
     value.nextSteps.forEach(n => lines.push(`  - ${n}`))
+  }
+
+  // 交付展示：仅在有「可过目内容」（产出/验证/证据）时出现，否则不空邀请
+  if (value.success && (value.artifacts.length > 0 || value.verificationSummary || value.evidence)) {
+    lines.push(formatDeliveryReview(value))
   }
 
   return lines.join('\n')

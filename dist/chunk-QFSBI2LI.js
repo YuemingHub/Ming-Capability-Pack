@@ -2473,6 +2473,15 @@ function collectWorkflowArtifacts(result) {
 
 // src/tools/ming-auto.ts
 import { defineTool } from "@deepseek-ai/dsh-tools";
+function formatDeliveryReview(value) {
+  const lines = ["", "\u2500\u2500 \u4EA4\u4ED8\u5C55\u793A\uFF1A\u8BF7\u4F60\u8FC7\u76EE \u2500\u2500"];
+  lines.push(`\u6211\u505A\u4E86 ${value.artifacts.length} \u9879\u4EA7\u51FA\uFF0C${value.verificationSummary ? "\u5E76\u5DF2\u72EC\u7ACB\u68C0\u67E5\uFF08\u7EC6\u8282\u89C1\u4E0A\uFF09" : "\u5DF2\u4EA4\u4ED8"}\u3002`);
+  if (value.evidence) {
+    lines.push(`\u8BC1\u636E\u8BB0\u5F55\u53EF\u56DE\u67E5\uFF1A${value.evidence}`);
+  }
+  lines.push("", "\u8BF7\u4F60\u770B\u4E00\u773C\u7ED3\u679C\uFF1A\u7B26\u5408\u4F60\u7684\u9884\u671F\u5417\uFF1F\u54EA\u91CC\u8981\u8C03\u6574\uFF1F\u76F4\u63A5\u544A\u8BC9\u6211\uFF0C\u6211\u9A6C\u4E0A\u6539\u3002");
+  return lines.join("\n");
+}
 function formatMingResult(value) {
   const lines = [value.summary];
   if (value.recipe) {
@@ -2494,6 +2503,9 @@ function formatMingResult(value) {
   if (value.nextSteps.length > 0) {
     lines.push("", "\u63A5\u4E0B\u6765\uFF1A");
     value.nextSteps.forEach((n) => lines.push(`  - ${n}`));
+  }
+  if (value.success && (value.artifacts.length > 0 || value.verificationSummary || value.evidence)) {
+    lines.push(formatDeliveryReview(value));
   }
   return lines.join("\n");
 }
@@ -2787,6 +2799,7 @@ export {
   appendMissingNotice,
   runWorkflow,
   collectWorkflowArtifacts,
+  formatDeliveryReview,
   formatMingResult,
   registerMingAutoTool
 };

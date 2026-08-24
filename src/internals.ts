@@ -70,7 +70,7 @@ export {
   type InstallOutcome,
   type ParsedInstallCommand,
 } from './services/installer.js'
-export { formatMingResult } from './tools/ming-auto.js'
+export { formatDeliveryReview, formatMingResult } from './tools/ming-auto.js'
 export { hashGoal, writeEvidence } from './services/evidence-collector.js'
 export { probeDshVerify, runBrowserAcceptance, type BrowserVerifyDeps, type BrowserVerifyResult } from './services/browser-verify.js'
 export type {

@@ -14,7 +14,7 @@ Ming Capability Pack 是一个 DeepSeek Harness（DSH）插件，让普通用户
 ## 当前版本
 
 - **版本**：v0.9.0（`package.json` + `src/index.ts` + 安装脚本同步）
-- **测试**：172/172 全绿（`npm test`）
+- **测试**：175/175 全绿（`npm test`）
 - **北极星**：VTE（月度真执行且验证通过任务数）+ MAP（月活 profile）
 
 ## 技术栈
@@ -66,6 +66,9 @@ Ming-Capability-Pack/
 │       └── next-steps.ts        # 失败分类建议
 ├── docs/
 │   ├── ECOSYSTEM.md             # 生态对比与差异化定位（战略依据）
+│   ├── ACCEPTANCE_PROTOCOL.md   # 开放验收协议规范 v1（跨宿主，5-10 年资产）
+│   ├── DELIVERY_EXPERIENCE.md   # 交付体验设计基准（5 次对话框架，人话词典）
+│   ├── TASK_STANDARDS.md        # 领域任务标准库（策展机制 + 首批种子）
 │   ├── EVOLUTION.md             # 演化记录（决策考古学）
 │   └── FAILURES.md              # 已知失败与教训
 ├── dist/                        # 构建产物
@@ -108,6 +111,7 @@ npm run cli          # CLI 入口
 4. **验收协议 v1**：verification / qualityBar 静态校验 fail-fast；每次独立验收追加 `ming-evidence/acceptance-history.jsonl`；`ming_acceptance` 查询各方案通过率与 VTE 北极星。
 5. **证据卡 provenance**：goalHash（目标 SHA-256 指纹）+ source + recipeId，溯源可查。
 6. **真实浏览器验收（可选）**：verification 支持 `browser_acceptance` 断言，对接 dsh-verify（JSON spec → 真实 Chromium → PASS/FAIL）；本机未装配时如实标记 skipped，不谎报通过、不阻塞交付。
+7. **交付体验层**：完成时给「交付展示」（产出数 + 独立检查 + 证据可回查 + 请你过目），把验收判断权交还用户；完整设计基准见 `docs/DELIVERY_EXPERIENCE.md`（5 次对话框架）。
 
 ## 交付/部署
 
