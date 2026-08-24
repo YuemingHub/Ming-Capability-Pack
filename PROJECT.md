@@ -68,7 +68,7 @@ Ming-Capability-Pack/
 │   ├── ECOSYSTEM.md             # 生态对比与差异化定位（战略依据）
 │   ├── ACCEPTANCE_PROTOCOL.md   # 开放验收协议规范 v1（跨宿主，5-10 年资产）
 │   ├── DELIVERY_EXPERIENCE.md   # 交付体验设计基准（5 次对话框架，人话词典）
-│   ├── TASK_STANDARDS.md        # 领域任务标准库（策展机制 + 首批种子）
+│   ├── TASK_STANDARDS.md        # 领域任务标准库（策展机制 + 6 张标准卡：整理/建站/发布/信息图/图文/视频）
 │   ├── EVOLUTION.md             # 演化记录（决策考古学）
 │   └── FAILURES.md              # 已知失败与教训
 ├── dist/                        # 构建产物
