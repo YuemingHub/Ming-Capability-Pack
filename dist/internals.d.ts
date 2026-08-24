@@ -481,6 +481,11 @@ interface DispatchOptions {
         confirmed?: boolean;
         detail?: string;
     }>;
+    /**
+     * true = 所有候选都走「一句确认」，绝不自动装（含 curated 的官方/bundled 源）。
+     * 供通用能力缺口探测（gap-probe）等低置信度场景使用——「可能需要」的能力不该静默安装。
+     */
+    forceConfirm?: boolean;
 }
 /**
  * 调度缺失能力：curated 优先 → 市场兜底 → 可信源自动装 / 社区源提议。
@@ -1010,6 +1015,24 @@ interface EvidenceFile {
 declare function writeEvidence(payload: EvidencePayload): Promise<EvidenceFile>;
 
 /**
+ * 通用能力缺口探测（Generic Capability Gap Probe）
+ *
+ * 装配断路的修复：dispatch 原本只在「命中了方案且方案声明能力缺失」时触发，
+ * 未命中方案的任务（如「做个视频」）即使市场里有能装的能力，装配机制也根本不上场。
+ * 本模块补上这一段：从目标文本与资源文件名推断「可能需要」的能力，
+ * 交给 dispatch 走市场找候选——社区源一句确认，绝不自动装。
+ *
+ * 与方案内声明的能力缺口不同：这里是「低置信度推断」（可能需要 vs 确定需要），
+ * 所以配套使用 dispatch 的 forceConfirm：所有候选都走「一句确认」，不自动装。
+ */
+
+/**
+ * 从目标文本 + 资源文件名推断可能需要的能力缺口。
+ * 纯函数、零副作用；返回去重后的 CapabilityRef 列表（无命中返回空数组）。
+ */
+declare function probeGenericCapabilityGaps(goal: string, resources?: string[]): CapabilityRef[];
+
+/**
  * 真实浏览器验收（browser_acceptance 断言执行器）
  *
  * 对接社区工具 dsh-verify（Witness）：JSON spec → 真实 Chromium → PASS/FAIL 与
@@ -1042,4 +1065,4 @@ declare function probeDshVerify(): Promise<boolean>;
 /** 执行一次浏览器验收：spec 相对路径基于 workdir 解析；输出按「PASS/FAIL 关键字 + 退出码」判定 */
 declare function runBrowserAcceptance(spec: string, workdir: string, deps?: BrowserVerifyDeps): Promise<BrowserVerifyResult>;
 
-export { ACCEPTANCE_PROTOCOL_VERSION, type AcceptanceRecord, type AcceptanceSummary, type ArtifactCheck, type BrowserVerifyDeps, type BrowserVerifyResult, CURATED_CAPABILITIES, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type CuratedCapability, type DispatchAction, type DispatchEntry, type DispatchOptions, type DispatchResult, type DispatchState, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MarketplacePlugin, type MingResult, type ParsedInstallCommand, type Pitfall, type ProtocolValidationError, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendAcceptanceRecord, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, computeVte, computeVteTrend, dispatchMissingCapabilities, dshBinCandidates, exportRecipeToSkillMd, extractArtifacts, failedKindsOf, findRecipesByGoal, formatAcceptance, formatClarify, formatDeliveryReview, formatMingResult, formatProtocolErrors, formatStoreResult, formatStrategyOptions, formatVerification, formatVte, getRecipe, hashGoal, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, monthKeyOf, nextStepsFor, parseInstallCommand, planExecution, probeDshVerify, profileDirsOf, rankCandidates, readAcceptanceHistory, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runBrowserAcceptance, runDshInstall, runWorkflow, searchMarketplacePlugins, searchStorePlugins, stopReasonText, suggestQueryFor, summarizeAcceptance, tokensOf, validateQualityBar, validateRecipeProtocol, validateVerificationChecks, verifyChecks, workflowNextSteps, writeEvidence };
+export { ACCEPTANCE_PROTOCOL_VERSION, type AcceptanceRecord, type AcceptanceSummary, type ArtifactCheck, type BrowserVerifyDeps, type BrowserVerifyResult, CURATED_CAPABILITIES, type CapabilityAvailability, type CapabilityKind, type CapabilityPlan, type CapabilityRef, type ClarifyQuestion, type CuratedCapability, type DispatchAction, type DispatchEntry, type DispatchOptions, type DispatchResult, type DispatchState, type ErrorKind, type ExecutionOutcome, type HistoryEntry, type HistoryResult, type InstallCheckResult, type InstallExecution, type InstallOutcome, type MarketplacePlugin, type MingResult, type ParsedInstallCommand, type Pitfall, type ProtocolValidationError, RECIPES, type Recipe, type RecommendContext, STRATEGY_OPTIONS, type ScoredCandidate, type StorePlugin, type StoreSearchOptions, type StoreSearchResult, type StrategyKind, type StrategyOption, type VerificationCheck, type VerificationResult, type VerificationSummary, type WorkflowFailureKind, type WorkflowResult, type WorkflowStep, type WorkflowStepResult, appendAcceptanceRecord, appendMissingNotice, assembleContext, buildInstallArgs, buildInstallCommand, buildRecommendationReason, checkInstalled, clarifyStatus, collectWorkflowArtifacts, computeVte, computeVteTrend, dispatchMissingCapabilities, dshBinCandidates, exportRecipeToSkillMd, extractArtifacts, failedKindsOf, findRecipesByGoal, formatAcceptance, formatClarify, formatDeliveryReview, formatMingResult, formatProtocolErrors, formatStoreResult, formatStrategyOptions, formatVerification, formatVte, getRecipe, hashGoal, installCapability, kindFromStopReason, looksLikeLocalPath, matchReason, matchesSimplePatternForTest, monthKeyOf, nextStepsFor, parseInstallCommand, planExecution, probeDshVerify, probeGenericCapabilityGaps, profileDirsOf, rankCandidates, readAcceptanceHistory, recipeCatalog, resolveAnswers, resolveCapabilities, resolveDshHome, resolveProfileName, resolveTimeoutMs, resolveWorkdir, runBrowserAcceptance, runDshInstall, runWorkflow, searchMarketplacePlugins, searchStorePlugins, stopReasonText, suggestQueryFor, summarizeAcceptance, tokensOf, validateQualityBar, validateRecipeProtocol, validateVerificationChecks, verifyChecks, workflowNextSteps, writeEvidence };

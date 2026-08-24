@@ -12,6 +12,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { assembleContext } from '../capabilities/assembler.js'
 import { dispatchMissingCapabilities } from '../capabilities/dispatch.js'
+import { probeGenericCapabilityGaps } from '../capabilities/gap-probe.js'
 import { resolveAnswers } from '../capabilities/planner.js'
 import { resolveCapabilities } from '../capabilities/resolver.js'
 import { formatVerification, verifyChecks } from '../capabilities/verifier.js'
@@ -185,6 +186,22 @@ export function registerMingAutoTool(ctx: Context): void {
         }
       }
 
+      // 未命中方案时：通用能力缺口探测——从目标/资源推断可能需要的能力 → 市场找候选 → 社区源一句确认。
+      // 低置信度推断，所以 forceConfirm：官方源也不自动装，全部走「回确认」。
+      let gapNotice = ''
+      let gapNextSteps: string[] = []
+      if (!plan.recipeId) {
+        const gapRefs = probeGenericCapabilityGaps(goal, resources)
+        if (gapRefs.length > 0) {
+          const dispatch = await dispatchMissingCapabilities(gapRefs, { forceConfirm: true })
+          const proposed = dispatch.entries.filter(e => e.action === 'proposed')
+          if (proposed.length > 0) {
+            gapNotice = `我注意到这个任务可能需要额外能力：\n${proposed.map(e => `- ${e.ref.purpose}（候选 ${e.source}）`).join('\n')}\n\n回「确认」我就帮你装（装好重启 DSH 后生效）。本次先用现有能力尽力完成。`
+            gapNextSteps = proposed.map(e => `回「确认」帮你装 ${e.source}（${e.reason}）`)
+          }
+        }
+      }
+
       // ② 装配：把方案要求 + 用户确认的方向注入执行上下文
       const answers = resolveAnswers(plan, args.strategy, args.answers)
       const contextual = assembleContext(plan, answers)
@@ -256,10 +273,10 @@ export function registerMingAutoTool(ctx: Context): void {
       const result: MingResult = {
         success: outcome.success,
         mode: outcome.mode,
-        summary: [dispatchNotice, appendMissingNotice(outcome)].filter(Boolean).join('\n\n'),
+        summary: [dispatchNotice, gapNotice, appendMissingNotice(outcome)].filter(Boolean).join('\n\n'),
         artifacts: outcome.artifacts,
         evidence: evidencePath,
-        nextSteps: [...dispatchNextSteps, ...nextStepsFor(outcome)],
+        nextSteps: [...dispatchNextSteps, ...gapNextSteps, ...nextStepsFor(outcome)],
         recipe: plan.recipeName ?? '',
         planSummary: buildPlanSummary(plan),
         verificationSummary,

@@ -891,7 +891,8 @@ async function dispatchMissingCapabilities(missingRefs, options = {}) {
     const curated = await findCurated(ref);
     if (curated) {
       const command = await buildCommand(curated.source);
-      if (curated.trust === "bundled" || curated.trust === "official") {
+      const canAutoInstall = !options.forceConfirm && (curated.trust === "bundled" || curated.trust === "official");
+      if (canAutoInstall) {
         const result = await install(curated.source);
         const confirmed = result.ok && result.confirmed !== false;
         entries.push({
@@ -958,6 +959,49 @@ async function dispatchMissingCapabilities(missingRefs, options = {}) {
     notFoundCount,
     summary: lines.join("\n")
   };
+}
+
+// src/capabilities/gap-probe.ts
+var GAP_RULES = [
+  {
+    keywords: ["\u89C6\u9891", "\u77ED\u89C6\u9891", "\u526A\u8F91", "vlog", "\u52A8\u753B", "\u7247\u5934", "\u5F55\u50CF", ".mp4", ".mov", ".avi", ".webm", "video"],
+    ref: { kind: "tool", id: "video", purpose: "\u89C6\u9891\u5236\u4F5C/\u526A\u8F91", trust: "community" }
+  },
+  {
+    keywords: ["\u753B", "\u56FE\u7247", "\u7167\u7247", "\u56FE\u50CF", "\u6D77\u62A5", ".jpg", ".jpeg", ".png", ".gif", ".webp", "photo", "image"],
+    ref: { kind: "tool", id: "image_edit", purpose: "\u56FE\u7247\u5904\u7406/\u7ED8\u5236", trust: "community" }
+  },
+  {
+    keywords: ["\u8868\u683C", "excel", "xlsx", "csv", "\u7535\u5B50\u8868\u683C", "\u6570\u636E\u8868"],
+    ref: { kind: "tool", id: "excel_read", purpose: "\u8BFB\u53D6/\u7F16\u8F91\u8868\u683C\u6570\u636E", trust: "community" }
+  },
+  {
+    keywords: ["ppt", "\u6F14\u793A\u6587\u7A3F", "\u5E7B\u706F\u7247", "\u6C47\u62A5"],
+    ref: { kind: "tool", id: "ppt_create", purpose: "\u5236\u4F5C\u6F14\u793A\u6587\u7A3F", trust: "community" }
+  },
+  {
+    keywords: ["\u6570\u636E\u5E93", "sql", "\u5199\u67E5\u8BE2"],
+    ref: { kind: "tool", id: "db_ops", purpose: "\u8FDE\u63A5\u6570\u636E\u5E93\u5199 SQL", trust: "community" }
+  },
+  {
+    keywords: ["\u77E5\u8BC6\u5E93", "rag", "\u6587\u6863\u95EE\u7B54"],
+    ref: { kind: "tool", id: "knowledge_rag", purpose: "\u628A\u6587\u6863\u53D8\u6210\u53EF\u67E5\u8BE2\u7684\u77E5\u8BC6\u5E93", trust: "community" }
+  },
+  {
+    keywords: ["\u53D1\u5E03", "\u4E0A\u7EBF", "\u90E8\u7F72", "\u8BA9\u522B\u4EBA\u80FD\u770B", "\u516C\u5F00\u8BBF\u95EE"],
+    ref: { kind: "tool", id: "publish_deploy", purpose: "\u53D1\u5E03\u5230\u516C\u5F00\u5730\u5740", trust: "community" }
+  }
+];
+function probeGenericCapabilityGaps(goal, resources = []) {
+  const text = `${goal}
+${resources.join("\n")}`.toLowerCase();
+  const found = /* @__PURE__ */ new Map();
+  for (const rule of GAP_RULES) {
+    if (rule.keywords.some((k) => text.includes(k.toLowerCase()))) {
+      found.set(rule.ref.id, rule.ref);
+    }
+  }
+  return [...found.values()];
 }
 
 // src/capabilities/recipes.ts
@@ -2595,6 +2639,22 @@ ${dispatch.summary}
           dispatchNextSteps = dispatch.entries.filter((e) => e.action === "proposed" && e.command).map((e) => `\u56DE\u300C\u786E\u8BA4\u300D\u5E2E\u4F60\u88C5 ${e.source}\uFF08${e.reason}\uFF09`);
         }
       }
+      let gapNotice = "";
+      let gapNextSteps = [];
+      if (!plan.recipeId) {
+        const gapRefs = probeGenericCapabilityGaps(goal, resources);
+        if (gapRefs.length > 0) {
+          const dispatch = await dispatchMissingCapabilities(gapRefs, { forceConfirm: true });
+          const proposed = dispatch.entries.filter((e) => e.action === "proposed");
+          if (proposed.length > 0) {
+            gapNotice = `\u6211\u6CE8\u610F\u5230\u8FD9\u4E2A\u4EFB\u52A1\u53EF\u80FD\u9700\u8981\u989D\u5916\u80FD\u529B\uFF1A
+${proposed.map((e) => `- ${e.ref.purpose}\uFF08\u5019\u9009 ${e.source}\uFF09`).join("\n")}
+
+\u56DE\u300C\u786E\u8BA4\u300D\u6211\u5C31\u5E2E\u4F60\u88C5\uFF08\u88C5\u597D\u91CD\u542F DSH \u540E\u751F\u6548\uFF09\u3002\u672C\u6B21\u5148\u7528\u73B0\u6709\u80FD\u529B\u5C3D\u529B\u5B8C\u6210\u3002`;
+            gapNextSteps = proposed.map((e) => `\u56DE\u300C\u786E\u8BA4\u300D\u5E2E\u4F60\u88C5 ${e.source}\uFF08${e.reason}\uFF09`);
+          }
+        }
+      }
       const answers = resolveAnswers(plan, args.strategy, args.answers);
       const contextual = assembleContext(plan, answers);
       if (plan.workflow && plan.workflow.length > 0) {
@@ -2648,10 +2708,10 @@ ${dispatch.summary}
       const result = {
         success: outcome.success,
         mode: outcome.mode,
-        summary: [dispatchNotice, appendMissingNotice(outcome)].filter(Boolean).join("\n\n"),
+        summary: [dispatchNotice, gapNotice, appendMissingNotice(outcome)].filter(Boolean).join("\n\n"),
         artifacts: outcome.artifacts,
         evidence: evidencePath,
-        nextSteps: [...dispatchNextSteps, ...nextStepsFor(outcome)],
+        nextSteps: [...dispatchNextSteps, ...gapNextSteps, ...nextStepsFor(outcome)],
         recipe: plan.recipeName ?? "",
         planSummary: buildPlanSummary(plan),
         verificationSummary,
@@ -2782,6 +2842,7 @@ export {
   installCapability,
   CURATED_CAPABILITIES,
   dispatchMissingCapabilities,
+  probeGenericCapabilityGaps,
   RECIPES,
   findRecipesByGoal,
   getRecipe,

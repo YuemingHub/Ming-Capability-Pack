@@ -72,6 +72,7 @@ export {
 } from './services/installer.js'
 export { formatDeliveryReview, formatMingResult } from './tools/ming-auto.js'
 export { hashGoal, writeEvidence } from './services/evidence-collector.js'
+export { probeGenericCapabilityGaps } from './capabilities/gap-probe.js'
 export { probeDshVerify, runBrowserAcceptance, type BrowserVerifyDeps, type BrowserVerifyResult } from './services/browser-verify.js'
 export type {
   ArtifactCheck,

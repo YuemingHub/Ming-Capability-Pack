@@ -93,6 +93,11 @@ export interface DispatchOptions {
   search?: (query: string) => Promise<StoreSearchResult>
   /** 覆盖安装执行（测试隔离；默认走 dsh plugin add） */
   install?: (source: string) => Promise<{ ok: boolean; confirmed?: boolean; detail?: string }>
+  /**
+   * true = 所有候选都走「一句确认」，绝不自动装（含 curated 的官方/bundled 源）。
+   * 供通用能力缺口探测（gap-probe）等低置信度场景使用——「可能需要」的能力不该静默安装。
+   */
+  forceConfirm?: boolean
 }
 
 /** 默认市场搜索：Marketplace 优先（无 key 无限流、带中文摘要），失败或空时回退 1024Store */
@@ -205,7 +210,9 @@ export async function dispatchMissingCapabilities(
 
     if (curated) {
       const command = await buildCommand(curated.source)
-      if (curated.trust === 'bundled' || curated.trust === 'official') {
+      // forceConfirm：低置信度场景（通用缺口探测）不自动装，官方/bundled 也走「一句确认」
+      const canAutoInstall = !options.forceConfirm && (curated.trust === 'bundled' || curated.trust === 'official')
+      if (canAutoInstall) {
         const result = await install(curated.source)
         // 只有「命令成功且已确认写入 profile」才敢报 installed；装完但没确认生效 → 降级为待确认，
         // 绝不把「没装成/没确认」的能力当「已装好」交给用户（重启后能力不存在是给小白的技术债）。

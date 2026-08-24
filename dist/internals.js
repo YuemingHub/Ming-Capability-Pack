@@ -40,6 +40,7 @@ import {
   parseInstallCommand,
   planExecution,
   probeDshVerify,
+  probeGenericCapabilityGaps,
   profileDirsOf,
   rankCandidates,
   readAcceptanceHistory,
@@ -65,7 +66,7 @@ import {
   verifyChecks,
   workflowNextSteps,
   writeEvidence
-} from "./chunk-MB7D7SYT.js";
+} from "./chunk-LYODF2P7.js";
 
 // src/capabilities/skill-md.ts
 function toListItems(lines) {
@@ -175,6 +176,7 @@ export {
   parseInstallCommand,
   planExecution,
   probeDshVerify,
+  probeGenericCapabilityGaps,
   profileDirsOf,
   rankCandidates,
   readAcceptanceHistory,
