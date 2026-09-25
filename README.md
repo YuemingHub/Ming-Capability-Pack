@@ -1,3 +1,15 @@
+> ⚠️ **RETIREMENT NOTICE · 2026-09-25**
+>
+> Ming Capability Pack is no longer an active Ming runtime/platform.
+>
+> Its own Shrink Gate (Issue #1) concluded that generic execution, capability discovery/install, resolver/registry/marketplace and verifier runtime should be **replaced by mature external Agent / Skill / MCP / tool ecosystems**.
+>
+> What may survive is only a small portable Recipe / Acceptance asset **after repeated YueMing real use proves value**. Such assets belong in the relevant Project Repo or YueMing Agent Space; they do not justify keeping this runtime active.
+>
+> This repository remains readable as research/provenance. Do not start new platform/runtime development here. See [RETIREMENT.md](./RETIREMENT.md).
+
+---
+
 # Ming Capability Pack
 
 **用自然语言，一键调用 DeepSeek Harness 原生能力，真正把事做完。**
